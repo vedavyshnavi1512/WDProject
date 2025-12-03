@@ -632,6 +632,11 @@
                 document.getElementById('input-age').value = data.age || '';
                 document.getElementById('input-gender').value = data.gender || '';
 
+                // Force email population
+                if (auth.currentUser && auth.currentUser.email) {
+                    document.getElementById('input-email').value = auth.currentUser.email;
+                }
+
                 // Update Display
                 document.getElementById('profile-name').innerText = data.name || currentUserName || 'Anonymous';
                 document.getElementById('sidebar-name').innerText = data.name || currentUserName || 'Anonymous';
