@@ -1277,7 +1277,18 @@
         }
 
         // UI Helpers
-        function switchTab(tab) { const tabs = ['feed', 'explore', 'profile']; tabs.forEach(t => { document.getElementById('view-' + t).classList.add('hidden'); }); document.getElementById('view-' + tab).classList.remove('hidden'); }
+        function switchTab(tab) {
+            const tabs = ['feed', 'explore', 'profile'];
+            tabs.forEach(t => { document.getElementById('view-' + t).classList.add('hidden'); });
+            document.getElementById('view-' + tab).classList.remove('hidden');
+
+            if (tab === 'profile' && auth.currentUser && auth.currentUser.email) {
+                const emailField = document.getElementById('input-email');
+                if (emailField && !emailField.value) {
+                    emailField.value = auth.currentUser.email;
+                }
+            }
+        }
 
         function openModal(id) {
             console.log("Opening modal:", id);
