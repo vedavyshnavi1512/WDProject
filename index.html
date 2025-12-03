@@ -531,6 +531,8 @@
                     <div>
                         <h3 id="public-name" class="text-xl font-bold text-slate-900">User Name</h3>
                         <p id="public-title" class="text-sm text-slate-500">Title</p>
+                        <p id="public-email" class="text-sm text-slate-500 flex items-center gap-1 mt-1"><i
+                                class="ph-fill ph-envelope-simple"></i> <span></span></p>
                     </div>
                 </div>
                 <div class="mt-4 flex gap-2">
@@ -918,6 +920,7 @@
 
                 document.getElementById('public-name').innerText = data.name || "Unknown User";
                 document.getElementById('public-title').innerText = data.title || "Member";
+                document.querySelector('#public-email span').innerText = data.email || "No email";
                 document.getElementById('public-avatar').src = `https://api.dicebear.com/7.x/notionists/svg?seed=${data.name || 'User'}`;
 
                 document.getElementById('public-age').innerText = data.age ? `Age: ${data.age}` : 'Age: -';
