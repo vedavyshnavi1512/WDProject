@@ -488,8 +488,8 @@
                         <h3 id="chat-title" class="font-bold text-slate-900 text-sm">Activity Name</h3>
                         <p id="chat-subtitle" class="text-xs text-slate-500">5 members active</p>
                     </div>
-                </div><button onclick="closeModal('chat-modal')"
-                    class="p-2 text-slate-400 hover:bg-slate-100 rounded-full"><i class="ph ph-x text-xl"></i></button>
+                </div><button onclick="closeChat()" class="p-2 text-slate-400 hover:bg-slate-100 rounded-full"><i
+                        class="ph ph-x text-xl"></i></button>
             </div>
             <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50 scroll-smooth"></div>
             <div class="p-3 bg-white border-t border-slate-200">
@@ -1095,7 +1095,7 @@
                                 </div>
                             </div>
                             <div class="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto border-t sm:border-t-0 border-slate-100 pt-3 sm:pt-0 mt-1 sm:mt-0">
-                                <button onclick="openChat('${evt.title}', ${evt.current_people})" class="${isJoined ? '' : 'hidden'} chat-btn p-2.5 text-slate-500 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-colors"><i class="ph-fill ph-chat-circle-dots text-xl"></i></button>
+                                <button onclick="openChat('${evt.id}', '${evt.title}', ${evt.current_people})" class="${isJoined ? '' : 'hidden'} chat-btn p-2.5 text-slate-500 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-colors"><i class="ph-fill ph-chat-circle-dots text-xl"></i></button>
                                 ${isCreator
                             ? `<button onclick="deleteEvent('${evt.id}')" class="px-5 py-2 bg-white border border-slate-200 text-red-500 text-sm font-bold rounded-lg hover:bg-red-50">Delete</button>`
                             : `<button onclick="joinEvent('${evt.id}')" class="px-5 py-2 ${isJoined ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-slate-900 text-white'} text-sm font-semibold rounded-lg shadow-sm whitespace-nowrap">${isJoined ? 'Joined' : 'Join'}</button>`
@@ -1346,42 +1346,101 @@
             }, 300);
         }
 
-        function openChat(title, members) {
+        let currentChatEventId = null;
+        let chatPollInterval = null;
+
+        function openChat(eventId, title, membersCount) {
             console.log("Opening chat for:", title);
+            currentChatEventId = eventId;
+
             const modal = document.getElementById('chat-modal');
             const panel = document.getElementById('chat-panel');
 
             document.getElementById('chat-title').innerText = title;
-            document.getElementById('chat-subtitle').innerText = `${members} members active`;
+            document.getElementById('chat-subtitle').innerText = `${membersCount} members active`;
 
             // Clear previous messages
             const msgContainer = document.getElementById('chat-messages');
-            msgContainer.innerHTML = '<div class="text-center text-slate-400 text-xs mt-4">This is the start of your conversation.</div>';
+            msgContainer.innerHTML = '<div class="text-center text-slate-400 text-xs mt-4">Loading conversation...</div>';
 
             modal.classList.remove('hidden');
             setTimeout(() => {
                 modal.classList.remove('opacity-0');
-                panel.classList.remove('scale-95', 'opacity-0'); // Slide up effect
-                panel.classList.remove('translate-y-full'); // For mobile
+                panel.classList.remove('scale-95', 'opacity-0');
+                panel.classList.remove('translate-y-full');
             }, 10);
+
+            loadChatMessages();
+
+            // Poll for new messages every 3 seconds
+            if (chatPollInterval) clearInterval(chatPollInterval);
+            chatPollInterval = setInterval(loadChatMessages, 3000);
         }
 
-        function handleChatSubmit(e) {
+        function closeChat() {
+            if (chatPollInterval) clearInterval(chatPollInterval);
+            closeModal('chat-modal');
+        }
+
+        async function loadChatMessages() {
+            if (!currentChatEventId) return;
+            try {
+                const token = await auth.currentUser.getIdToken();
+                const res = await fetch(`/events/${currentChatEventId}/chat`, {
+                    headers: { 'Authorization': token }
+                });
+
+                if (res.status === 403) {
+                    document.getElementById('chat-messages').innerHTML = '<div class="text-center text-red-400 text-xs mt-4">You must join this event to chat.</div>';
+                    return;
+                }
+
+                const messages = await res.json();
+                const container = document.getElementById('chat-messages');
+
+                if (messages.length === 0) {
+                    container.innerHTML = '<div class="text-center text-slate-400 text-xs mt-4">Start the conversation!</div>';
+                    return;
+                }
+
+                container.innerHTML = messages.map(msg => {
+                    const isMe = msg.sender_uid === auth.currentUser.uid;
+                    return `
+                        <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'} mb-3 animate-fade-in-up">
+                            <span class="text-[10px] text-slate-400 mb-1 px-1">${msg.sender_name}</span>
+                            <div class="${isMe ? 'bg-brand-600 text-white rounded-tr-none' : 'bg-slate-100 text-slate-800 rounded-tl-none'} px-4 py-2 rounded-2xl text-sm max-w-[80%] shadow-sm">
+                                ${msg.message}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                // Scroll to bottom
+                container.scrollTop = container.scrollHeight;
+            } catch (e) {
+                console.error("Chat load error:", e);
+            }
+        }
+
+        async function handleChatSubmit(e) {
             e.preventDefault();
             const input = document.getElementById('chat-input');
-            const msg = input.value.trim();
-            if (!msg) return;
+            const message = input.value.trim();
+            if (!message) return;
 
-            const container = document.getElementById('chat-messages');
-            const html = `
-                <div class="flex justify-end animate-fade-in-up">
-                    <div class="bg-brand-600 text-white px-4 py-2 rounded-2xl rounded-tr-none max-w-[80%] text-sm shadow-sm">
-                        ${msg}
-                    </div>
-                </div>`;
-            container.insertAdjacentHTML('beforeend', html);
-            input.value = '';
-            container.scrollTop = container.scrollHeight;
+            input.value = ''; // Clear early for UX
+
+            try {
+                const token = await auth.currentUser.getIdToken();
+                await fetch(`/events/${currentChatEventId}/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': token },
+                    body: JSON.stringify({ message })
+                });
+                loadChatMessages(); // Refresh immediately
+            } catch (e) {
+                alert("Failed to send message");
+            }
         }
 
         function showToast(msg) { const t = document.getElementById('toast'); document.getElementById('toast-message').innerText = msg; t.classList.remove('translate-y-24', 'opacity-0'); setTimeout(() => t.classList.add('translate-y-24', 'opacity-0'), 3000); }

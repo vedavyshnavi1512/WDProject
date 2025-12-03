@@ -409,5 +409,61 @@ def get_reviews(user_id):
         "total_reviews": count
     }), 200
 
+# --- CHAT ROUTES ---
+@app.route('/events/<event_id>/chat', methods=['GET'])
+def get_chat_messages(event_id):
+    user = verify_token(request)
+    if not user:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    # Verify membership
+    event_ref = db.collection('events').document(event_id)
+    event = event_ref.get()
+    if not event.exists:
+        return jsonify({"error": "Event not found"}), 404
+    
+    if user['uid'] not in event.to_dict().get('members', []) and event.to_dict().get('creator_uid') != user['uid']:
+        return jsonify({"error": "Not a member"}), 403
+
+    # Fetch messages
+    messages_ref = db.collection('events').document(event_id).collection('messages').order_by('timestamp').stream()
+    messages = []
+    for doc in messages_ref:
+        data = doc.to_dict()
+        data['id'] = doc.id
+        messages.append(data)
+    
+    return jsonify(messages), 200
+
+@app.route('/events/<event_id>/chat', methods=['POST'])
+def send_chat_message(event_id):
+    user = verify_token(request)
+    if not user:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    # Verify membership
+    event_ref = db.collection('events').document(event_id)
+    event = event_ref.get()
+    if not event.exists:
+        return jsonify({"error": "Event not found"}), 404
+    
+    if user['uid'] not in event.to_dict().get('members', []) and event.to_dict().get('creator_uid') != user['uid']:
+        return jsonify({"error": "Not a member"}), 403
+
+    data = request.json
+    message = data.get('message')
+    if not message:
+        return jsonify({"error": "Message required"}), 400
+
+    msg_data = {
+        'sender_uid': user['uid'],
+        'sender_name': user.get('name', 'Anonymous'),
+        'message': message,
+        'timestamp': datetime.now().isoformat()
+    }
+
+    db.collection('events').document(event_id).collection('messages').add(msg_data)
+    return jsonify(msg_data), 201
+
 if __name__ == '__main__':
     app.run(debug=True, port=5001)
