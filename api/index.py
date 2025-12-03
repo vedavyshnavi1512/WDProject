@@ -89,6 +89,20 @@ def signup():
         )
         # Generate custom token for client to sign in
         custom_token = auth.create_custom_token(user.uid)
+        
+        # Create user document in Firestore
+        try:
+            db.collection('users').document(user.uid).set({
+                'name': name,
+                'email': email,
+                'created_at': datetime.now(),
+                'bio': '',
+                'title': ''
+            })
+        except Exception as db_e:
+            print(f"Error creating user doc: {db_e}")
+            # Continue anyway, token is generated
+            
         return jsonify({"token": custom_token.decode('utf-8')}), 201
     except Exception as e:
         return jsonify({"error": str(e)}), 400
