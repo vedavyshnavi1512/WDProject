@@ -1,0 +1,43 @@
+{
+    "version": 2,
+    "builds": [
+        {
+            "src": "backend/app.py",
+            "use": "@vercel/python"
+        },
+        {
+            "src": "index.html",
+            "use": "@vercel/static"
+        }
+    ],
+    "rewrites": [
+        {
+            "source": "/auth/:match*",
+            "destination": "/backend/app.py"
+        },
+        {
+            "source": "/events/:match*",
+            "destination": "/backend/app.py"
+        },
+        {
+            "source": "/join",
+            "destination": "/backend/app.py"
+        },
+        {
+            "source": "/reviews/:match*",
+            "destination": "/backend/app.py"
+        },
+        {
+            "source": "/users/:match*",
+            "destination": "/backend/app.py"
+        },
+        {
+            "source": "/health",
+            "destination": "/backend/app.py"
+        },
+        {
+            "source": "/(.*)",
+            "destination": "/index.html"
+        }
+    ]
+}
