@@ -15,16 +15,26 @@ app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 
 # Initialize Firebase
-if os.environ.get('FIREBASE_CREDENTIALS'):
-    cred = credentials.Certificate(json.loads(os.environ.get('FIREBASE_CREDENTIALS')))
-else:
-    cred = credentials.Certificate("serviceAccountKey.json")
-firebase_admin.initialize_app(cred)
-db = firestore.client()
+firebase_init_error = None
+try:
+    if os.environ.get('FIREBASE_CREDENTIALS'):
+        cred = credentials.Certificate(json.loads(os.environ.get('FIREBASE_CREDENTIALS')))
+    else:
+        cred = credentials.Certificate("serviceAccountKey.json")
+    firebase_admin.initialize_app(cred)
+    db = firestore.client()
+except Exception as e:
+    firebase_init_error = str(e)
+    print(f"Firebase Init Error: {e}")
+    db = None
 
 # --- MIDDLEWARE: Verify Token ---
 def verify_token(req):
     """Checks for 'Authorization' header and verifies it with Firebase"""
+    if firebase_init_error:
+        print(f"Auth Error: Backend failed to initialize - {firebase_init_error}")
+        return None
+
     token = req.headers.get('Authorization')
     if not token:
         print("Auth Error: No Authorization header found")
@@ -119,6 +129,8 @@ def home():
 
 @app.route('/health', methods=['GET'])
 def health():
+    if firebase_init_error:
+        return jsonify({"status": "error", "message": firebase_init_error}), 500
     return jsonify({"status": "ok"}), 200
 
 # --- MOCK DATA ---
@@ -170,6 +182,8 @@ MOCK_EVENTS = [
 # --- PUBLIC ROUTES ---
 @app.route('/events', methods=['GET'])
 def get_events():
+    if firebase_init_error:
+        return jsonify({"error": f"Backend Init Failed: {firebase_init_error}"}), 500
     try:
         events_ref = db.collection('events').order_by('created_at', direction=firestore.Query.DESCENDING)
         docs = events_ref.stream()

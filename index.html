@@ -836,7 +836,10 @@
                         </div>`;
                     container.insertAdjacentHTML('beforeend', html);
                 });
-            } catch (error) { console.error("Load Events Error:", error); alert("Error loading events: " + error.message); }
+            } catch (error) {
+                console.error("Load Events Error:", error);
+                alert("Failed to load events: " + error.message);
+            }
         }
 
         async function handlePostSubmit(event) {
