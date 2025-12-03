@@ -542,7 +542,7 @@
         async function testBackend() {
             console.log("Testing Backend Connection...");
             try {
-                const res = await fetch('http://127.0.0.1:5001/events');
+                const res = await fetch('/events');
                 console.log("Backend Status:", res.status);
                 const data = await res.json();
                 console.log("Data received:", JSON.stringify(data).substring(0, 50) + "...");
@@ -619,7 +619,7 @@
 
         async function checkProfileCompletion(uid) {
             try {
-                const res = await fetch(`http://127.0.0.1:5001/users/${uid}`);
+                const res = await fetch(`/users/${uid}`);
                 const data = await res.json();
 
                 // Populate inputs if they exist
@@ -648,7 +648,7 @@
 
             try {
                 const token = await auth.currentUser.getIdToken();
-                const res = await fetch('http://127.0.0.1:5001/users/profile', {
+                const res = await fetch('/users/profile', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -692,7 +692,7 @@
 
                 btn.innerText = "Processing...";
 
-                const endpoint = isSignup ? 'http://127.0.0.1:5001/auth/signup' : 'http://127.0.0.1:5001/auth/login';
+                const endpoint = isSignup ? '/auth/signup' : '/auth/login';
                 const body = { email, password, captcha_token: captchaToken };
                 if (isSignup) body.name = nameField.querySelector('input').value;
 
@@ -784,7 +784,7 @@
         async function loadEvents() {
             console.log("Fetching events...");
             try {
-                const response = await fetch('http://127.0.0.1:5001/events');
+                const response = await fetch('/events');
                 console.log("Events Response Status:", response.status);
                 let events = await response.json();
                 console.log("Events Loaded:", events.length);
@@ -853,7 +853,7 @@
                 // Get current user's token
                 const token = await auth.currentUser.getIdToken();
 
-                const response = await fetch('http://127.0.0.1:5001/events', {
+                const response = await fetch('/events', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -880,7 +880,7 @@
             try {
                 if (!auth.currentUser) { alert("Please sign in first"); return; }
                 const token = await auth.currentUser.getIdToken();
-                const res = await fetch('http://127.0.0.1:5001/join', {
+                const res = await fetch('/join', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': token },
                     body: JSON.stringify({ event_id: eventId })
@@ -898,7 +898,7 @@
         async function loadReviews(userId) {
             console.log("Fetching reviews for:", userId);
             try {
-                const res = await fetch(`http://127.0.0.1:5001/reviews/${userId}`);
+                const res = await fetch(`/reviews/${userId}`);
                 const data = await res.json();
 
                 // Update Reliability Score
@@ -952,7 +952,7 @@
         async function submitReview(targetUid, rating, comment) {
             try {
                 const token = await auth.currentUser.getIdToken();
-                const res = await fetch('http://127.0.0.1:5001/reviews', {
+                const res = await fetch('/reviews', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -975,7 +975,7 @@
             if (!confirm("Delete this review?")) return;
             try {
                 const token = await auth.currentUser.getIdToken();
-                const res = await fetch(`http://127.0.0.1:5001/reviews/${reviewId}`, {
+                const res = await fetch(`/reviews/${reviewId}`, {
                     method: 'DELETE',
                     headers: { 'Authorization': token }
                 });
@@ -1011,7 +1011,7 @@
         async function deleteEvent(eventId) {
             if (!confirm("Delete this event?")) return;
             const token = await auth.currentUser.getIdToken();
-            await fetch(`http://127.0.0.1:5001/events/${eventId}`, {
+            await fetch(`/events/${eventId}`, {
                 method: 'DELETE',
                 headers: { 'Authorization': token }
             });
