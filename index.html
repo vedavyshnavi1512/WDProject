@@ -515,6 +515,77 @@
             </div>
         </div>
     </div>
+    <div id="public-profile-modal"
+        class="fixed inset-0 z-[80] bg-black/50 hidden flex items-center justify-center backdrop-blur-sm transition-all duration-200 opacity-0">
+        <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden relative transform scale-95 transition-all duration-300 max-h-[90vh] flex flex-col"
+            id="public-profile-panel">
+            <button onclick="closeModal('public-profile-modal')"
+                class="absolute top-4 right-4 text-slate-400 hover:text-slate-700 transition-colors z-10"><i
+                    class="ph ph-x text-2xl"></i></button>
+
+            <div class="bg-slate-50 p-6 border-b border-slate-100">
+                <div class="flex items-center gap-4">
+                    <div class="w-16 h-16 rounded-full bg-white border-4 border-white shadow-md overflow-hidden">
+                        <img id="public-avatar" src="" class="w-full h-full object-cover">
+                    </div>
+                    <div>
+                        <h3 id="public-name" class="text-xl font-bold text-slate-900">User Name</h3>
+                        <p id="public-title" class="text-sm text-slate-500">Title</p>
+                    </div>
+                </div>
+                <div class="mt-4 flex gap-2">
+                    <span id="public-age"
+                        class="px-3 py-1 bg-white border border-slate-200 rounded-full text-xs font-bold text-slate-600">Age:
+                        -</span>
+                    <span id="public-gender"
+                        class="px-3 py-1 bg-white border border-slate-200 rounded-full text-xs font-bold text-slate-600">Gender:
+                        -</span>
+                </div>
+            </div>
+
+            <div class="p-6 overflow-y-auto flex-1">
+                <div class="mb-6">
+                    <h4 class="text-xs font-bold text-slate-400 uppercase mb-2">About</h4>
+                    <p id="public-bio" class="text-sm text-slate-700 leading-relaxed italic">No bio yet.</p>
+                </div>
+
+                <div class="border-t border-slate-100 pt-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h4 class="text-xs font-bold text-slate-400 uppercase">Reviews</h4>
+                        <button onclick="togglePublicReviewForm()"
+                            class="text-xs font-bold text-brand-600 hover:text-brand-700">Write Review</button>
+                    </div>
+
+                    <div id="public-review-form" class="hidden mb-4 bg-slate-50 p-4 rounded-xl">
+                        <div class="mb-3">
+                            <label class="block text-xs font-bold text-slate-500 mb-1">Rating</label>
+                            <select id="public-review-rating"
+                                class="w-full p-2 rounded-lg border border-slate-200 text-sm">
+                                <option value="5">5 Stars - Excellent</option>
+                                <option value="4">4 Stars - Good</option>
+                                <option value="3">3 Stars - Okay</option>
+                                <option value="2">2 Stars - Poor</option>
+                                <option value="1">1 Star - Terrible</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="block text-xs font-bold text-slate-500 mb-1">Comment</label>
+                            <textarea id="public-review-comment" rows="2"
+                                class="w-full p-2 rounded-lg border border-slate-200 text-sm"
+                                placeholder="Share your experience..."></textarea>
+                        </div>
+                        <button onclick="submitPublicReview()"
+                            class="w-full py-2 bg-slate-900 text-white rounded-lg text-sm font-bold">Submit
+                            Review</button>
+                    </div>
+
+                    <div id="public-reviews-list" class="space-y-3">
+                        <!-- Reviews loaded here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
     <div id="toast"
         class="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-slate-900 text-white px-6 py-3 rounded-full shadow-2xl z-[80] transition-all duration-300 translate-y-24 opacity-0 flex items-center gap-2">
         <i class="ph-fill ph-check-circle text-brand-400 text-xl"></i><span id="toast-message"
@@ -819,6 +890,79 @@
             loadEvents();
         }
 
+        let currentPublicProfileUid = null;
+
+        async function openPublicProfile(uid) {
+            currentPublicProfileUid = uid;
+            const modal = document.getElementById('public-profile-modal');
+            const panel = document.getElementById('public-profile-panel');
+
+            // Show modal
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                panel.classList.remove('scale-95', 'opacity-0');
+            }, 10);
+
+            // Reset UI
+            document.getElementById('public-name').innerText = "Loading...";
+            document.getElementById('public-title').innerText = "";
+            document.getElementById('public-bio').innerText = "Loading...";
+            document.getElementById('public-review-form').classList.add('hidden');
+            document.getElementById('public-reviews-list').innerHTML = '<p class="text-sm text-slate-500 italic">Loading reviews...</p>';
+
+            try {
+                // Fetch User Data
+                const res = await fetch(`/users/${uid}`);
+                const data = await res.json();
+
+                document.getElementById('public-name').innerText = data.name || "Unknown User";
+                document.getElementById('public-title').innerText = data.title || "Member";
+                document.getElementById('public-avatar').src = `https://api.dicebear.com/7.x/notionists/svg?seed=${data.name || 'User'}`;
+
+                document.getElementById('public-age').innerText = data.age ? `Age: ${data.age}` : 'Age: -';
+                document.getElementById('public-gender').innerText = data.gender ? `Gender: ${data.gender}` : 'Gender: -';
+
+                const bioEl = document.getElementById('public-bio');
+                if (data.bio) {
+                    bioEl.innerText = data.bio;
+                    bioEl.classList.remove('italic', 'text-slate-400');
+                } else {
+                    bioEl.innerText = "No bio yet.";
+                    bioEl.classList.add('italic', 'text-slate-400');
+                }
+
+                // Load Reviews
+                loadReviews(uid, 'public-reviews-list');
+
+            } catch (e) {
+                console.error("Error loading profile:", e);
+                alert("Failed to load profile");
+                closeModal('public-profile-modal');
+            }
+        }
+
+        function togglePublicReviewForm() {
+            if (!auth.currentUser) { alert("Please sign in first"); return; }
+            if (currentPublicProfileUid === auth.currentUser.uid) { alert("You cannot review yourself!"); return; }
+
+            const form = document.getElementById('public-review-form');
+            form.classList.toggle('hidden');
+        }
+
+        async function submitPublicReview() {
+            const rating = document.getElementById('public-review-rating').value;
+            const comment = document.getElementById('public-review-comment').value;
+
+            if (!comment) { alert("Please write a comment"); return; }
+
+            await submitReview(currentPublicProfileUid, rating, comment);
+
+            // Reset form
+            document.getElementById('public-review-comment').value = '';
+            document.getElementById('public-review-form').classList.add('hidden');
+        }
+
         async function showEventMembers(eventId) {
             const modal = document.getElementById('members-modal');
             const panel = document.getElementById('members-panel');
@@ -988,25 +1132,30 @@
             }
         }
 
-        async function loadReviews(userId) {
+
+        async function loadReviews(userId, containerId = 'reviews-list') {
             console.log("Fetching reviews for:", userId);
             try {
                 const res = await fetch(`/reviews/${userId}`);
                 const data = await res.json();
 
-                // Update Reliability Score
-                const reliabilityEl = document.getElementById('reliability-score');
-                if (reliabilityEl) {
-                    if (data.total_reviews > 0) {
-                        const percentage = Math.round((data.average_rating / 5) * 100);
-                        reliabilityEl.innerText = percentage + "%";
-                    } else {
-                        reliabilityEl.innerText = "New";
+                // Update Reliability Score (Only if on own profile tab)
+                if (containerId === 'reviews-list') {
+                    const reliabilityEl = document.getElementById('reliability-score');
+                    if (reliabilityEl) {
+                        if (data.total_reviews > 0) {
+                            const percentage = Math.round((data.average_rating / 5) * 100);
+                            reliabilityEl.innerText = percentage + "%";
+                        } else {
+                            reliabilityEl.innerText = "New";
+                        }
                     }
                 }
 
                 // Update Reviews List
-                const container = document.getElementById('reviews-list');
+                const container = document.getElementById(containerId);
+                if (!container) return;
+
                 if (data.reviews.length === 0) {
                     container.innerHTML = '<p class="text-sm text-slate-500 italic">No reviews yet.</p>';
                     return;
