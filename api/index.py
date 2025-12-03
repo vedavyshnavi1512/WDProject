@@ -265,6 +265,46 @@ def delete_event(event_id):
     
     return jsonify({"error": "Permission denied"}), 403
 
+@app.route('/events/<event_id>/members', methods=['GET'])
+def get_event_members(event_id):
+    try:
+        event_ref = db.collection('events').document(event_id)
+        event = event_ref.get()
+        
+        if not event.exists:
+            return jsonify({"error": "Event not found"}), 404
+            
+        member_uids = event.to_dict().get('members', [])
+        members_data = []
+        
+        # Batch fetch users would be better, but for now loop is fine for small scale
+        # Or use 'in' query if list is small (<10)
+        
+        if not member_uids:
+             return jsonify([]), 200
+
+        # Fetch up to 10 members at a time or just loop (simple for now)
+        for uid in member_uids:
+            user_doc = db.collection('users').document(uid).get()
+            if user_doc.exists:
+                user_data = user_doc.to_dict()
+                members_data.append({
+                    "uid": uid,
+                    "name": user_data.get('name', 'Unknown User'),
+                    "title": user_data.get('title', '')
+                })
+            else:
+                members_data.append({
+                    "uid": uid,
+                    "name": "Unknown User",
+                    "title": ""
+                })
+                
+        return jsonify(members_data), 200
+    except Exception as e:
+        print(f"Error fetching members: {e}")
+        return jsonify({"error": str(e)}), 500
+
 # --- REVIEW ROUTES ---
 @app.route('/reviews', methods=['POST'])
 def add_review():

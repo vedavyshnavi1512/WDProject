@@ -502,6 +502,19 @@
             </div>
         </div>
     </div>
+    <div id="members-modal"
+        class="fixed inset-0 z-[70] bg-black/50 hidden flex items-center justify-center backdrop-blur-sm transition-all duration-200 opacity-0">
+        <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-6 relative transform scale-95 transition-all duration-300"
+            id="members-panel">
+            <button onclick="closeModal('members-modal')"
+                class="absolute top-4 right-4 text-slate-400 hover:text-slate-700 transition-colors"><i
+                    class="ph ph-x text-2xl"></i></button>
+            <h3 class="text-xl font-bold text-slate-900 mb-4">Participants</h3>
+            <div id="members-list" class="space-y-3 max-h-[60vh] overflow-y-auto">
+                <!-- Members will be loaded here -->
+            </div>
+        </div>
+    </div>
     <div id="toast"
         class="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-slate-900 text-white px-6 py-3 rounded-full shadow-2xl z-[80] transition-all duration-300 translate-y-24 opacity-0 flex items-center gap-2">
         <i class="ph-fill ph-check-circle text-brand-400 text-xl"></i><span id="toast-message"
@@ -806,6 +819,58 @@
             loadEvents();
         }
 
+        async function showEventMembers(eventId) {
+            const modal = document.getElementById('members-modal');
+            const panel = document.getElementById('members-panel');
+            const list = document.getElementById('members-list');
+
+            // Show modal with loading state
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                panel.classList.remove('scale-95', 'opacity-0');
+            }, 10);
+
+            list.innerHTML = `
+                <div class="animate-pulse flex gap-3">
+                    <div class="w-10 h-10 bg-slate-200 rounded-full"></div>
+                    <div class="flex-1 space-y-2 py-1">
+                        <div class="h-2 bg-slate-200 rounded w-3/4"></div>
+                        <div class="h-2 bg-slate-200 rounded w-1/2"></div>
+                    </div>
+                </div>`;
+
+            try {
+                const res = await fetch(`/events/${eventId}/members`);
+                const members = await res.json();
+
+                list.innerHTML = '';
+
+                if (members.length === 0) {
+                    list.innerHTML = '<p class="text-slate-500 text-center py-4">No participants yet.</p>';
+                    return;
+                }
+
+                members.forEach(m => {
+                    const html = `
+                        <div class="flex items-center gap-3 p-2 hover:bg-slate-50 rounded-lg transition-colors">
+                            <div class="w-10 h-10 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center font-bold text-sm">
+                                ${m.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                                <p class="font-bold text-slate-900 text-sm">${m.name}</p>
+                                <p class="text-xs text-slate-500">${m.title || 'Member'}</p>
+                            </div>
+                        </div>`;
+                    list.insertAdjacentHTML('beforeend', html);
+                });
+
+            } catch (e) {
+                console.error("Error loading members:", e);
+                list.innerHTML = '<p class="text-red-500 text-center py-4">Failed to load members.</p>';
+            }
+        }
+
         async function loadEvents() {
             console.log("Fetching events...");
             try {
@@ -843,7 +908,7 @@
                                 <div class="flex items-center gap-4 text-sm text-slate-500">
                                     <span class="flex items-center gap-1"><i class="ph-fill ph-map-pin"></i> ${evt.location}</span>
                                     <span class="flex items-center gap-1"><i class="ph-fill ph-calendar-blank"></i> ${evt.event_date || 'TBD'} at ${evt.event_time || 'TBD'}</span>
-                                    <span class="flex items-center gap-1 text-green-600 font-medium"><i class="ph-fill ph-users"></i> ${evt.current_people}/${evt.max_people} spots</span>
+                                    <span onclick="showEventMembers('${evt.id}')" class="flex items-center gap-1 text-green-600 font-medium cursor-pointer hover:underline"><i class="ph-fill ph-users"></i> ${evt.current_people}/${evt.max_people} spots</span>
                                 </div>
                                 <div class="mt-3">
                                     <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(evt.location)}" target="_blank" class="inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-800 hover:underline">
