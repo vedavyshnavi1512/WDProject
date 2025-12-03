@@ -966,11 +966,16 @@
 
             if (!comment) { alert("Please write a comment"); return; }
 
-            await submitReview(currentPublicProfileUid, rating, comment);
+            const success = await submitReview(currentPublicProfileUid, rating, comment);
 
-            // Reset form
-            document.getElementById('public-review-comment').value = '';
-            document.getElementById('public-review-form').classList.add('hidden');
+            if (success) {
+                // Reset form
+                document.getElementById('public-review-comment').value = '';
+                document.getElementById('public-review-form').classList.add('hidden');
+
+                // Reload reviews in the modal
+                loadReviews(currentPublicProfileUid, 'public-reviews-list');
+            }
         }
 
         async function showEventMembers(eventId) {
@@ -1214,8 +1219,8 @@
                 });
 
                 if (res.ok) {
-                    loadReviews(targetUid); // Refresh list
-                    checkProfileCompletion(targetUid); // Refresh reliability
+                    showToast("Review submitted");
+                    return true;
                 }
             } catch (e) {
                 console.error(e);
