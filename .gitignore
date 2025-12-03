@@ -1,0 +1,7 @@
+backend/ServiceAccountKey.json
+__pycache__/
+.DS_Store
+venv/
+.venv/
+*.pyc
+.env

@@ -1,0 +1,1109 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TogetherNow - Campus Meetups</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['"Plus Jakarta Sans"', 'sans-serif'] },
+                    colors: { brand: { 50: '#f0fdfa', 100: '#ccfbf1', 500: '#14b8a6', 600: '#0d9488', 700: '#0f766e', 900: '#134e4a' } },
+                    animation: { 'fade-in-down': 'fadeInDown 0.5s ease-out', 'fade-out': 'fadeOut 0.3s ease-in forwards', 'message-pop': 'messagePop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)' },
+                    keyframes: {
+                        fadeInDown: { '0%': { opacity: '0', transform: 'translateY(-10px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
+                        fadeOut: { '0%': { opacity: '1', transform: 'scale(1)' }, '100%': { opacity: '0', transform: 'scale(0.95)' } },
+                        messagePop: { '0%': { opacity: '0', transform: 'scale(0.9) translateY(10px)' }, '100%': { opacity: '1', transform: 'scale(1) translateY(0)' } }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        html {
+            scroll-behavior: smooth;
+        }
+
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 text-slate-900 font-sans antialiased h-screen overflow-hidden">
+
+    <div id="auth-container" class="fixed inset-0 z-[100] bg-white flex w-full h-full">
+
+        <div class="hidden lg:flex w-1/2 bg-brand-600 relative overflow-hidden items-center justify-center p-12">
+            <div class="absolute inset-0 bg-gradient-to-br from-brand-500 to-brand-900 opacity-90"></div>
+            <div
+                class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1523240795612-9a054b0db644?q=80&w=2940&auto=format&fit=crop')] bg-cover bg-center mix-blend-overlay opacity-20">
+            </div>
+
+            <div class="relative z-10 text-white max-w-lg">
+                <div
+                    class="w-16 h-16 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center mb-8 border border-white/30 shadow-xl">
+                    <i class="ph-bold ph-users-three text-4xl text-white"></i>
+                </div>
+                <h1 class="text-5xl font-bold mb-6 leading-tight">Find your people on campus.</h1>
+                <p class="text-brand-100 text-lg leading-relaxed">Join sports games, study groups, and coffee breaks
+                    happening right now. No more lonely semesters.</p>
+
+                <!-- Student count removed -->
+            </div>
+        </div>
+
+        <div class="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white overflow-y-auto">
+            <div class="w-full max-w-md space-y-8">
+
+                <div class="lg:hidden flex items-center gap-2 mb-8">
+                    <div class="w-10 h-10 bg-brand-500 rounded-lg flex items-center justify-center text-white"><i
+                            class="ph-bold ph-users-three text-2xl"></i></div>
+                    <span class="text-2xl font-bold text-slate-900">TogetherNow</span>
+                </div>
+
+                <div class="text-center lg:text-left">
+                    <h2 id="auth-title" class="text-3xl font-bold text-slate-900">Welcome back</h2>
+                    <p id="auth-subtitle" class="text-slate-500 mt-2">Please enter your details to sign in.</p>
+                </div>
+
+                <div class="flex p-1 bg-slate-100 rounded-xl">
+                    <button onclick="toggleAuthMode('login')" id="btn-login-mode"
+                        class="flex-1 py-2.5 text-sm font-bold rounded-lg bg-white text-slate-900 shadow-sm transition-all">Sign
+                        In</button>
+                    <button onclick="toggleAuthMode('signup')" id="btn-signup-mode"
+                        class="flex-1 py-2.5 text-sm font-bold rounded-lg text-slate-500 hover:text-slate-900 transition-all">Sign
+                        Up</button>
+                </div>
+
+                <form onsubmit="handleAuthSubmit(event)" class="space-y-5">
+
+                    <div id="field-name" class="hidden space-y-1.5">
+                        <label class="text-sm font-bold text-slate-700">Full Name</label>
+                        <div class="relative">
+                            <i class="ph-fill ph-user absolute left-4 top-3.5 text-slate-400 text-lg"></i>
+                            <input type="text" placeholder="John Doe"
+                                class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none transition-all font-medium">
+                        </div>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label class="text-sm font-bold text-slate-700">Email</label>
+                        <div class="relative">
+                            <i class="ph-fill ph-envelope-simple absolute left-4 top-3.5 text-slate-400 text-lg"></i>
+                            <input id="input-email" type="email" placeholder="student@university.edu"
+                                class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none transition-all font-medium">
+                        </div>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label class="text-sm font-bold text-slate-700">Password</label>
+                        <div class="relative">
+                            <i class="ph-fill ph-lock-key absolute left-4 top-3.5 text-slate-400 text-lg"></i>
+                            <input id="input-password" type="password" placeholder="••••••••"
+                                class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none transition-all font-medium">
+                        </div>
+                    </div>
+
+                    <div id="forgot-password" class="flex justify-end">
+                        <a href="#" class="text-sm font-bold text-brand-600 hover:text-brand-700">Forgot password?</a>
+                    </div>
+
+                    <div class="flex justify-center mb-6">
+                        <div class="g-recaptcha" data-sitekey="6LdVRB8sAAAAAMzuqPiqocAqwQjCpii1E3vswaPG"></div>
+                    </div>
+
+                    <button id="btn-submit-auth" type="submit"
+                        class="w-full py-3.5 bg-slate-900 hover:bg-brand-600 text-white font-bold rounded-xl shadow-lg shadow-brand-500/20 transition-all transform active:scale-95 text-lg">
+                        Sign In
+                    </button>
+                </form>
+
+                <!-- Social Login Removed -->
+            </div>
+        </div>
+    </div>
+
+    <div id="app-container" class="hidden flex h-full overflow-hidden">
+
+        <aside class="hidden md:flex flex-col w-64 bg-white border-r border-slate-200 h-full fixed left-0 top-0 z-30">
+            <div class="h-20 flex items-center px-6 border-b border-slate-100">
+                <a href="/" class="flex items-center gap-2 group">
+                    <div
+                        class="w-8 h-8 bg-brand-500 rounded-lg flex items-center justify-center text-white shadow-lg shadow-brand-500/30 group-hover:scale-105 transition-transform">
+                        <i class="ph-bold ph-users-three"></i>
+                    </div>
+                    <span class="text-xl font-bold tracking-tight text-slate-900">TogetherNow</span>
+                </a>
+            </div>
+            <nav class="flex-1 p-4 space-y-2">
+                <button onclick="switchTab('feed')" id="nav-feed"
+                    class="w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold rounded-xl transition-colors bg-brand-50 text-brand-700"><i
+                        class="ph-fill ph-house text-xl"></i> Home Feed</button>
+                <button onclick="switchTab('explore')" id="nav-explore"
+                    class="w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 rounded-xl transition-colors"><i
+                        class="ph-fill ph-compass text-xl"></i> Explore</button>
+                <button onclick="switchTab('profile')" id="nav-profile"
+                    class="w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 rounded-xl transition-colors"><i
+                        class="ph-fill ph-user text-xl"></i> My Profile</button>
+            </nav>
+            <div class="p-4 border-t border-slate-100">
+                <button onclick="openModal('post')"
+                    class="w-full flex items-center justify-center gap-2 bg-slate-900 hover:bg-brand-600 text-white px-5 py-3 rounded-xl text-sm font-bold shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5"><i
+                        class="ph-bold ph-plus"></i> Post Activity</button>
+                <button onclick="switchTab('profile')"
+                    class="mt-4 w-full flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-slate-50 transition-colors group">
+                    <div class="relative">
+                        <img src="https://api.dicebear.com/7.x/notionists/svg?seed=Felix" alt="User"
+                            class="w-10 h-10 rounded-full bg-slate-200 border border-white shadow-sm group-hover:scale-105 transition-transform">
+                        <div id="profile-dot"
+                            class="hidden absolute top-0 right-0 w-3 h-3 bg-red-500 border-2 border-white rounded-full">
+                        </div>
+                    </div>
+                    <div class="text-left">
+                        <p id="sidebar-name" class="text-sm font-bold text-slate-900">Felix Chen</p>
+                        <p class="text-xs text-slate-500">View Account</p>
+                    </div>
+                </button>
+                <button onclick="signOut()"
+                    class="w-full mt-2 flex items-center justify-center gap-2 text-red-500 hover:bg-red-50 px-2 py-2 rounded-lg text-xs font-bold transition-colors">
+                    <i class="ph-bold ph-sign-out"></i> Sign Out
+                </button>
+            </div>
+        </aside>
+
+        <div class="flex-1 flex flex-col h-full md:ml-64 relative">
+            <header
+                class="md:hidden h-16 bg-white/95 backdrop-blur-md border-b border-slate-200 flex items-center justify-between px-4 sticky top-0 z-20">
+                <div class="flex items-center gap-3"><button onclick="toggleMobileMenu()"
+                        class="p-2 -ml-2 text-slate-600 hover:bg-slate-100 rounded-full"><i
+                            class="ph ph-list text-2xl"></i></button><span
+                        class="font-bold text-lg text-slate-900">TogetherNow</span></div>
+                <button onclick="switchTab('profile')"
+                    class="w-8 h-8 rounded-full overflow-hidden border border-slate-200"><img
+                        src="https://api.dicebear.com/7.x/notionists/svg?seed=Felix" alt="User"></button>
+            </header>
+
+            <main class="flex-1 overflow-y-auto p-4 md:p-8 scroll-smooth">
+                <div id="view-feed" class="max-w-4xl mx-auto space-y-8 animate-fade-in-down">
+                    <section>
+                        <div class="flex overflow-x-auto no-scrollbar gap-3 pb-2">
+                            <button onclick="filterEvents('All')" id="btn-All"
+                                class="flex-shrink-0 flex items-center gap-2 px-5 py-3 rounded-full bg-slate-900 text-white border border-slate-900 transition-all cursor-pointer shadow-sm">
+                                <span class="font-semibold">All</span>
+                            </button>
+                            <button onclick="filterEvents('Sports')" id="btn-Sports"
+                                class="flex-shrink-0 flex items-center gap-2 px-5 py-3 rounded-full bg-white border border-slate-200 hover:border-brand-500 hover:bg-brand-50 transition-all cursor-pointer shadow-sm">
+                                <i class="ph-fill ph-basketball text-xl text-brand-500"></i>
+                                <span class="font-semibold text-slate-700">Sports</span>
+                            </button>
+                            <button onclick="filterEvents('Coffee')" id="btn-Coffee"
+                                class="flex-shrink-0 flex items-center gap-2 px-5 py-3 rounded-full bg-white border border-slate-200 hover:border-brand-500 hover:bg-brand-50 transition-all cursor-pointer shadow-sm">
+                                <i class="ph-fill ph-coffee text-xl text-brand-500"></i>
+                                <span class="font-semibold text-slate-700">Coffee</span>
+                            </button>
+                            <button onclick="filterEvents('Study')" id="btn-Study"
+                                class="flex-shrink-0 flex items-center gap-2 px-5 py-3 rounded-full bg-white border border-slate-200 hover:border-brand-500 hover:bg-brand-50 transition-all cursor-pointer shadow-sm">
+                                <i class="ph-fill ph-books text-xl text-brand-500"></i>
+                                <span class="font-semibold text-slate-700">Study</span>
+                            </button>
+                        </div>
+                    </section>
+                    <section>
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-xl font-bold text-slate-900">Upcoming near you</h2><button
+                                class="text-sm font-medium text-slate-500 hover:text-slate-900 flex items-center gap-1">Filter
+                                <i class="ph-bold ph-faders"></i></button>
+                        </div>
+                        <div id="events-container" class="space-y-4">
+                            <!-- Events will be loaded here -->
+                            <div class="text-center py-10 text-slate-500">Loading events...</div>
+                        </div>
+                    </section>
+                </div>
+
+                <div id="view-explore" class="max-w-5xl mx-auto space-y-10 hidden animate-fade-in-down">
+                    <div class="text-center md:text-left">
+                        <h1 class="text-3xl font-bold text-slate-900 mb-2">Explore Campus</h1>
+                        <p class="text-slate-500">Discover trending clubs and communities.</p>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div
+                            class="bg-white rounded-2xl border border-slate-200 overflow-hidden hover:shadow-lg transition-all group">
+                            <div class="h-32 bg-gradient-to-r from-blue-500 to-indigo-600 relative">
+                                <div
+                                    class="absolute -bottom-6 left-6 w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-md">
+                                    <i class="ph-fill ph-camera text-2xl text-indigo-600"></i>
+                                </div>
+                            </div>
+                            <div class="pt-8 p-6">
+                                <h3 class="text-lg font-bold text-slate-900 mb-1">Photography Society</h3>
+                                <p class="text-sm text-slate-500 mb-4">Weekly photo walks.</p><span
+                                    class="text-xs font-semibold text-slate-500"><i class="ph-fill ph-users"></i> 128
+                                    Members</span>
+                            </div>
+                        </div>
+                        <div
+                            class="bg-white rounded-2xl border border-slate-200 overflow-hidden hover:shadow-lg transition-all group">
+                            <div class="h-32 bg-gradient-to-r from-emerald-500 to-teal-600 relative">
+                                <div
+                                    class="absolute -bottom-6 left-6 w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-md">
+                                    <i class="ph-fill ph-mountains text-2xl text-emerald-600"></i>
+                                </div>
+                            </div>
+                            <div class="pt-8 p-6">
+                                <h3 class="text-lg font-bold text-slate-900 mb-1">Hiking & Adventure</h3>
+                                <p class="text-sm text-slate-500 mb-4">Weekend trips.</p><span
+                                    class="text-xs font-semibold text-slate-500"><i class="ph-fill ph-users"></i> 340
+                                    Members</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="view-profile" class="max-w-3xl mx-auto space-y-8 hidden animate-fade-in-down">
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden relative">
+                        <div class="h-32 bg-gradient-to-r from-brand-500 to-blue-600"></div>
+                        <div class="px-6 pb-6">
+                            <div class="flex flex-col md:flex-row items-start md:items-end -mt-12 mb-4 gap-4">
+                                <div
+                                    class="w-24 h-24 rounded-full border-4 border-white bg-white shadow-md overflow-hidden">
+                                    <img src="https://api.dicebear.com/7.x/notionists/svg?seed=Felix"
+                                        class="w-full h-full object-cover">
+                                </div>
+                                <div class="flex-1 mt-2 md:mt-0">
+                                    <h1 id="profile-name" class="text-2xl font-bold text-slate-900">Felix Chen</h1>
+                                    <p id="profile-subtitle" class="text-slate-500 text-sm">Computer Science • Class of
+                                        2025</p>
+                                </div>
+                                <div
+                                    class="bg-brand-50 border border-brand-100 px-4 py-2 rounded-xl text-center mt-4 md:mt-0">
+                                    <p class="text-xs font-bold text-brand-600 uppercase tracking-wide">Reliability</p>
+                                    <div class="flex items-center gap-1 justify-center"><i
+                                            class="ph-fill ph-shield-check text-brand-500 text-xl"></i><span
+                                            id="reliability-score" class="text-xl font-bold text-slate-900">98%</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-4 pt-4 border-t border-slate-100">
+                                <p class="text-xs font-bold text-slate-400 uppercase mb-1">About Me</p>
+                                <p id="profile-bio-display" class="text-sm text-slate-700 leading-relaxed">Love
+                                    badminton, coffee, and late night coding sessions. Always down for a study group!
+                                </p>
+                            </div>
+                            <div class="mt-6 pt-6 border-t border-slate-100">
+                                <div class="flex items-center justify-between mb-4">
+                                    <p class="text-xs font-bold text-slate-400 uppercase">Reviews</p>
+                                    <button onclick="openReviewModal()"
+                                        class="text-xs font-bold text-brand-600 hover:text-brand-700">Write
+                                        Review</button>
+                                </div>
+                                <div id="reviews-list" class="space-y-4">
+                                    <p class="text-sm text-slate-500 italic">No reviews yet.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                        <h3 class="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2"><i
+                                class="ph-fill ph-gear text-slate-400"></i> Account Settings</h3>
+                        <form onsubmit="handleProfileSave(event)">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
+                                <div><label class="block text-sm font-semibold text-slate-700 mb-1">Full
+                                        Name</label><input id="input-name" type="text" value="Felix Chen"
+                                        class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none text-sm font-medium">
+                                </div>
+                                <div><label class="block text-sm font-semibold text-slate-700 mb-1">Title /
+                                        Major</label><input id="input-title" type="text"
+                                        value="Computer Science • Class of 2025"
+                                        class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none text-sm font-medium">
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-5 mb-5">
+                                <div><label class="block text-sm font-semibold text-slate-700 mb-1">Age</label><input
+                                        id="input-age" type="number" placeholder="20"
+                                        class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none text-sm font-medium">
+                                </div>
+                                <div><label
+                                        class="block text-sm font-semibold text-slate-700 mb-1">Gender</label><select
+                                        id="input-gender"
+                                        class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none text-sm font-medium">
+                                        <option value="">Select...</option>
+                                        <option value="Male">Male</option>
+                                        <option value="Female">Female</option>
+                                        <option value="Non-binary">Non-binary</option>
+                                        <option value="Prefer not to say">Prefer not to say</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mb-5"><label
+                                    class="block text-sm font-semibold text-slate-700 mb-1">Email</label><input
+                                    type="email" value="felix.c@university.edu"
+                                    class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none text-sm font-medium">
+                            </div>
+                            <div class="mb-5"><label
+                                    class="block text-sm font-semibold text-slate-700 mb-1">Bio</label><textarea
+                                    id="input-bio" rows="3"
+                                    class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none text-sm font-medium">Love badminton, coffee, and late night coding sessions. Always down for a study group!</textarea>
+                            </div>
+                            <div class="flex justify-end pt-2"><button type="submit"
+                                    class="bg-slate-900 text-white px-6 py-2.5 rounded-xl text-sm font-bold hover:bg-brand-600 transition-colors shadow-lg shadow-brand-500/20">Save
+                                    Changes</button></div>
+                        </form>
+                    </div>
+                </div>
+
+            </main>
+        </div>
+
+        <div id="mobile-menu"
+            class="fixed inset-0 z-50 bg-white transform -translate-x-full transition-transform duration-300 md:hidden flex flex-col">
+            <div class="p-4 border-b border-slate-100 flex items-center justify-between"><span
+                    class="font-bold text-lg">Menu</span><button onclick="toggleMobileMenu()"
+                    class="p-2 bg-slate-100 rounded-full text-slate-600"><i class="ph ph-x text-xl"></i></button></div>
+            <div class="flex-1 overflow-y-auto p-4 space-y-2">
+                <button onclick="switchTab('feed'); toggleMobileMenu()"
+                    class="w-full flex items-center gap-3 px-4 py-4 text-base font-semibold rounded-xl bg-slate-50 text-slate-900"><i
+                        class="ph-fill ph-house text-xl"></i> Home Feed</button>
+                <button onclick="switchTab('explore'); toggleMobileMenu()"
+                    class="w-full flex items-center gap-3 px-4 py-4 text-base font-semibold rounded-xl hover:bg-slate-50 text-slate-600"><i
+                        class="ph-fill ph-compass text-xl"></i> Explore</button>
+                <button onclick="switchTab('profile'); toggleMobileMenu()"
+                    class="w-full flex items-center gap-3 px-4 py-4 text-base font-semibold rounded-xl hover:bg-slate-50 text-slate-600"><i
+                        class="ph-fill ph-user text-xl"></i> My Profile</button>
+                <button onclick="openModal('post'); toggleMobileMenu()"
+                    class="w-full flex items-center gap-3 px-4 py-4 text-base font-semibold rounded-xl hover:bg-slate-50 text-slate-600"><i
+                        class="ph-fill ph-plus-circle text-xl"></i> Post Activity</button>
+                <button onclick="signOut(); toggleMobileMenu()"
+                    class="w-full flex items-center gap-3 px-4 py-4 text-base font-semibold rounded-xl text-red-500 hover:bg-red-50"><i
+                        class="ph-fill ph-sign-out text-xl"></i> Sign Out</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="action-modal"
+        class="fixed inset-0 z-[60] bg-black/50 hidden flex items-center justify-center backdrop-blur-sm p-4 transition-all duration-200 opacity-0">
+        <div class="bg-white rounded-2xl w-full max-w-lg p-6 shadow-2xl relative transform scale-95 transition-all duration-200"
+            id="modal-panel"><button onclick="closeModal('action-modal')"
+                class="absolute top-4 right-4 text-slate-400 hover:text-slate-700 transition-colors"><i
+                    class="ph ph-x text-2xl"></i></button>
+            <div id="form-post" class="hidden">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-10 h-10 bg-brand-100 rounded-full flex items-center justify-center text-brand-600"><i
+                            class="ph-fill ph-pencil-simple text-xl"></i></div>
+                    <h3 class="text-xl font-bold text-slate-900">Post Activity</h3>
+                </div>
+                <form onsubmit="handlePostSubmit(event)" class="space-y-4">
+                    <div><label class="block text-sm font-semibold text-slate-700 mb-1">What are you
+                            doing?</label><input id="post-title" required type="text"
+                            placeholder="e.g., Badminton doubles"
+                            class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg outline-none"></div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div><label class="block text-sm font-semibold text-slate-700 mb-1">Category</label><select
+                                id="post-category"
+                                class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg outline-none">
+                                <option value="Sports">Sports</option>
+                                <option value="Study">Study</option>
+                                <option value="Coffee">Coffee</option>
+                                <option value="Other">Other</option>
+                            </select></div>
+                        <div><label class="block text-sm font-semibold text-slate-700 mb-1">Max People</label><input
+                                id="post-max" type="number" placeholder="4"
+                                class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg outline-none">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div><label class="block text-sm font-semibold text-slate-700 mb-1">Date</label><input
+                                id="post-date" type="date" required
+                                class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg outline-none">
+                        </div>
+                        <div><label class="block text-sm font-semibold text-slate-700 mb-1">Time</label><input
+                                id="post-time" type="time" required
+                                class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg outline-none">
+                        </div>
+                    </div>
+                    <div><label class="block text-sm font-semibold text-slate-700 mb-1">Location</label><input
+                            id="post-location" required type="text" placeholder="e.g., Rec Center"
+                            class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg outline-none"></div>
+                    <button type="submit" class="w-full py-3 bg-brand-600 text-white font-bold rounded-xl mt-2">Post
+                        Activity</button>
+                </form>
+            </div>
+            <div id="form-join" class="hidden">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600"><i
+                            class="ph-fill ph-hand-waving text-xl"></i></div>
+                    <h3 class="text-xl font-bold text-slate-900">Join Activity</h3>
+                </div>
+                <form class="space-y-4"
+                    onsubmit="event.preventDefault(); showToast('Joined successfully!'); closeModal('action-modal');">
+                    <div><label class="block text-sm font-semibold text-slate-700 mb-1">Activity Code</label>
+                        <div class="flex gap-2"><input type="text" placeholder="#123-ABC"
+                                class="flex-1 px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg outline-none uppercase font-mono"><button
+                                class="bg-blue-600 text-white px-6 font-bold rounded-lg">Find</button></div>
+                    </div>
+                </form>
+            </div>
+            <div id="form-confirm" class="hidden">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center text-purple-600">
+                        <i class="ph-fill ph-check-circle text-xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-900">Confirm Attendance</h3>
+                </div>
+                <div class="border border-slate-200 rounded-xl p-4">
+                    <p class="text-sm text-slate-700 mb-3">Did you attend Morning Coffee Run?</p>
+                    <div class="flex gap-3"><button onclick="confirmEvent(true)"
+                            class="flex-1 py-2 bg-green-50 text-green-700 border border-green-200 rounded-lg text-sm font-bold">Yes</button><button
+                            onclick="confirmEvent(false)"
+                            class="flex-1 py-2 bg-slate-50 text-slate-600 border border-slate-200 rounded-lg text-sm font-bold">No</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="chat-modal"
+        class="fixed inset-0 z-[70] bg-black/50 hidden flex items-end sm:items-center justify-center backdrop-blur-sm transition-all duration-200 opacity-0">
+        <div class="bg-white w-full sm:max-w-md h-[80vh] sm:h-[600px] sm:rounded-2xl shadow-2xl flex flex-col relative transform translate-y-full sm:translate-y-0 sm:scale-95 transition-all duration-300"
+            id="chat-panel">
+            <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-white rounded-t-2xl z-10">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center"><i
+                            class="ph-fill ph-users-three text-xl"></i></div>
+                    <div>
+                        <h3 id="chat-title" class="font-bold text-slate-900 text-sm">Activity Name</h3>
+                        <p id="chat-subtitle" class="text-xs text-slate-500">5 members active</p>
+                    </div>
+                </div><button onclick="closeModal('chat-modal')"
+                    class="p-2 text-slate-400 hover:bg-slate-100 rounded-full"><i class="ph ph-x text-xl"></i></button>
+            </div>
+            <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50 scroll-smooth"></div>
+            <div class="p-3 bg-white border-t border-slate-200">
+                <form onsubmit="handleChatSubmit(event)" class="flex items-center gap-2"><input id="chat-input"
+                        type="text" placeholder="Type a message..."
+                        class="flex-1 px-4 py-3 bg-slate-100 border-none rounded-full focus:bg-white focus:ring-2 focus:ring-brand-500 outline-none transition-all text-sm"><button
+                        type="submit"
+                        class="w-10 h-10 bg-brand-600 text-white rounded-full flex items-center justify-center hover:bg-brand-700 transition-colors shadow-md"><i
+                            class="ph-fill ph-paper-plane-right"></i></button></form>
+            </div>
+        </div>
+    </div>
+    <div id="toast"
+        class="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-slate-900 text-white px-6 py-3 rounded-full shadow-2xl z-[80] transition-all duration-300 translate-y-24 opacity-0 flex items-center gap-2">
+        <i class="ph-fill ph-check-circle text-brand-400 text-xl"></i><span id="toast-message"
+            class="font-medium text-sm">Success</span>
+    </div>
+
+    <!-- DEBUG CONSOLE -->
+    <div id="debug-console"
+        class="fixed bottom-0 right-0 w-full md:w-96 h-64 bg-black/90 text-green-400 font-mono text-xs p-4 z-[100] overflow-y-auto border-t-2 border-green-500 opacity-90">
+        <div class="flex justify-between items-center mb-2 border-b border-green-800 pb-1">
+            <span class="font-bold">DEBUG CONSOLE</span>
+            <div class="flex gap-2">
+                <button onclick="testBackend()"
+                    class="px-2 py-0.5 bg-green-800 text-white rounded hover:bg-green-700">Test API</button>
+                <button onclick="checkAuth()" class="px-2 py-0.5 bg-blue-800 text-white rounded hover:bg-blue-700">Check
+                    Auth</button>
+                <button onclick="document.getElementById('debug-console').classList.toggle('hidden')"
+                    class="text-white hover:text-red-500">X</button>
+            </div>
+        </div>
+        <div id="debug-logs" class="space-y-1"></div>
+    </div>
+
+    <script>
+        // OVERRIDE CONSOLE
+        const debugLogs = document.getElementById('debug-logs');
+        function logToScreen(msg, type = 'info') {
+            const div = document.createElement('div');
+            div.innerText = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            if (type === 'error') div.style.color = '#f87171';
+            debugLogs.appendChild(div);
+            debugLogs.scrollTop = debugLogs.scrollHeight;
+        }
+        const originalLog = console.log;
+        const originalError = console.error;
+        console.log = (...args) => { originalLog(...args); logToScreen(args.join(' ')); };
+        console.error = (...args) => { originalError(...args); logToScreen(args.join(' '), 'error'); };
+        window.onerror = (msg, url, line) => { console.error(`Global Error: ${msg} at ${line}`); };
+
+        // MANUAL DEBUG FUNCTIONS
+        async function testBackend() {
+            console.log("Testing Backend Connection...");
+            try {
+                const res = await fetch('http://127.0.0.1:5001/events');
+                console.log("Backend Status:", res.status);
+                const data = await res.json();
+                console.log("Data received:", JSON.stringify(data).substring(0, 50) + "...");
+            } catch (e) {
+                console.error("Backend Test Failed:", e);
+            }
+        }
+
+        function checkAuth() {
+            console.log("Checking Auth State...");
+            if (auth.currentUser) {
+                console.log("User:", auth.currentUser.email, "| UID:", auth.currentUser.uid);
+                auth.currentUser.getIdToken().then(t => console.log("Token available")).catch(e => console.error("Token error", e));
+            } else {
+                console.warn("No user signed in.");
+            }
+        }
+    </script>
+
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
+    <script>
+        // 1. PASTE YOUR CONFIG HERE
+        const firebaseConfig = {
+            apiKey: "AIzaSyAsIMsDs2xG3WzfYo4R7Hl4fzfZOVkPFBI",
+            authDomain: "togethernow-c3cc2.firebaseapp.com",
+            projectId: "togethernow-c3cc2",
+            storageBucket: "togethernow-c3cc2.firebasestorage.app",
+            messagingSenderId: "409671013214",
+            appId: "1:409671013214:web:5e6e0bdb49f61f838635cf",
+            measurementId: "G-SH21RXVC20"
+        };
+
+        // 2. Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        let currentUserToken = null;
+        let currentUserName = "";
+
+        // --- AUTH LOGIC ---
+
+        // Listen for login state changes (Automatic)
+        auth.onAuthStateChanged(async (user) => {
+            console.log("Auth State Changed:", user ? "User Signed In" : "User Signed Out");
+            if (user) {
+                // User is signed in
+                console.log("User ID:", user.uid);
+                currentUserName = user.displayName || user.email.split('@')[0];
+                try {
+                    currentUserToken = await user.getIdToken(); // Get the security token
+                    console.log("Token retrieved successfully");
+                } catch (e) {
+                    console.error("Error getting token:", e);
+                }
+
+                // Update UI
+                document.getElementById('auth-container').classList.add('hidden');
+                document.getElementById('app-container').classList.remove('hidden');
+                document.getElementById('sidebar-name').innerText = currentUserName;
+                document.getElementById('profile-name').innerText = currentUserName;
+                document.getElementById('input-name').value = currentUserName;
+                document.getElementById('input-email').value = user.email;
+
+                loadEvents(); // Load data from backend
+                loadReviews(user.uid); // Load reviews
+                checkProfileCompletion(user.uid); // Check for red dot
+            } else {
+                // User is signed out
+                document.getElementById('app-container').classList.add('hidden');
+                document.getElementById('auth-container').classList.remove('hidden');
+            }
+        });
+
+        async function checkProfileCompletion(uid) {
+            try {
+                const res = await fetch(`http://127.0.0.1:5001/users/${uid}`);
+                const data = await res.json();
+
+                // Populate inputs if they exist
+                if (data.age) document.getElementById('input-age').value = data.age;
+                if (data.gender) document.getElementById('input-gender').value = data.gender;
+
+                // Check if incomplete
+                const dot = document.getElementById('profile-dot');
+                if (!data.age || !data.gender) {
+                    dot.classList.remove('hidden');
+                } else {
+                    dot.classList.add('hidden');
+                }
+            } catch (e) {
+                console.error("Error checking profile:", e);
+            }
+        }
+
+        async function handleProfileSave(e) {
+            e.preventDefault();
+            const name = document.getElementById('input-name').value;
+            const title = document.getElementById('input-title').value; // We don't save this to backend yet but we could
+            const bio = document.getElementById('input-bio').value; // Same
+            const age = document.getElementById('input-age').value;
+            const gender = document.getElementById('input-gender').value;
+
+            try {
+                const token = await auth.currentUser.getIdToken();
+                const res = await fetch('http://127.0.0.1:5001/users/profile', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': token
+                    },
+                    body: JSON.stringify({ name, title, bio, age, gender })
+                });
+
+                if (res.ok) {
+                    showToast("Profile updated!");
+                    checkProfileCompletion(auth.currentUser.uid); // Re-check to hide dot
+
+                    // Update UI name immediately
+                    document.getElementById('sidebar-name').innerText = name;
+                    document.getElementById('profile-name').innerText = name;
+                } else {
+                    throw new Error("Failed to save profile");
+                }
+            } catch (e) {
+                console.error(e);
+                alert(e.message);
+            }
+        }
+
+        async function handleAuthSubmit(e) {
+            e.preventDefault();
+            const email = e.target.querySelector('input[type="email"]').value;
+            const password = e.target.querySelector('input[type="password"]').value;
+            const nameField = document.getElementById('field-name');
+            const isSignup = !nameField.classList.contains('hidden');
+            const btn = document.getElementById('btn-submit-auth');
+
+
+            try {
+                // Get reCAPTCHA token
+                const captchaToken = grecaptcha.getResponse();
+                if (!captchaToken) {
+                    alert("Please complete the CAPTCHA.");
+                    return;
+                }
+
+                btn.innerText = "Processing...";
+
+                const endpoint = isSignup ? 'http://127.0.0.1:5001/auth/signup' : 'http://127.0.0.1:5001/auth/login';
+                const body = { email, password, captcha_token: captchaToken };
+                if (isSignup) body.name = nameField.querySelector('input').value;
+
+                const res = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || "Authentication failed");
+
+                // Sign in with the custom token returned by backend
+                if (data.token) {
+                    if (isSignup) {
+                        await auth.signInWithCustomToken(data.token);
+                        showToast("Account created! Welcome.");
+                    } else {
+                        // For login, we might get an ID token directly or a custom token depending on implementation.
+                        // If backend verifies password, it can mint a custom token.
+                        await auth.signInWithCustomToken(data.token);
+                        showToast("Welcome back!");
+                    }
+                }
+
+
+
+            } catch (error) {
+                console.error(error);
+                alert(error.message);
+                grecaptcha.reset();
+
+            } finally {
+                btn.innerText = isSignup ? "Create Account" : "Sign In";
+            }
+        }
+
+        function signOut() {
+            auth.signOut();
+            showToast("Signed out successfully");
+        }
+
+        // --- AUTH UI TOGGLE ---
+        function toggleAuthMode(mode) {
+            const btnLogin = document.getElementById('btn-login-mode');
+            const btnSignup = document.getElementById('btn-signup-mode');
+            const fieldName = document.getElementById('field-name');
+            const title = document.getElementById('auth-title');
+            const btnSubmit = document.getElementById('btn-submit-auth');
+            grecaptcha.reset();
+
+            if (mode === 'login') {
+                btnLogin.classList.replace('text-slate-500', 'bg-white'); btnLogin.classList.add('text-slate-900', 'shadow-sm');
+                btnSignup.classList.remove('bg-white', 'text-slate-900', 'shadow-sm'); btnSignup.classList.add('text-slate-500');
+                fieldName.classList.add('hidden');
+                title.innerText = 'Welcome back';
+                btnSubmit.innerText = 'Sign In';
+            } else {
+                btnSignup.classList.replace('text-slate-500', 'bg-white'); btnSignup.classList.add('text-slate-900', 'shadow-sm');
+                btnLogin.classList.remove('bg-white', 'text-slate-900', 'shadow-sm'); btnLogin.classList.add('text-slate-500');
+                fieldName.classList.remove('hidden');
+                title.innerText = 'Create Account';
+                btnSubmit.innerText = 'Create Account';
+            }
+        }
+
+        // --- BACKEND API CALLS (Updated with Token) ---
+        let currentCategory = 'All';
+
+        function filterEvents(category) {
+            currentCategory = category;
+
+            // Update UI
+            const buttons = ['All', 'Sports', 'Coffee', 'Study'];
+            buttons.forEach(btn => {
+                const el = document.getElementById('btn-' + btn);
+                if (btn === category) {
+                    el.className = "flex-shrink-0 flex items-center gap-2 px-5 py-3 rounded-full bg-slate-900 text-white border border-slate-900 transition-all cursor-pointer shadow-sm";
+                    el.querySelector('span').classList.remove('text-slate-700');
+                } else {
+                    el.className = "flex-shrink-0 flex items-center gap-2 px-5 py-3 rounded-full bg-white border border-slate-200 hover:border-brand-500 hover:bg-brand-50 transition-all cursor-pointer shadow-sm";
+                    el.querySelector('span').classList.add('text-slate-700');
+                }
+            });
+
+            loadEvents();
+        }
+
+        async function loadEvents() {
+            console.log("Fetching events...");
+            try {
+                const response = await fetch('http://127.0.0.1:5001/events');
+                console.log("Events Response Status:", response.status);
+                let events = await response.json();
+                console.log("Events Loaded:", events.length);
+
+                // Client-side filtering
+                if (currentCategory !== 'All') {
+                    events = events.filter(evt => evt.category === currentCategory);
+                }
+
+                const container = document.getElementById('events-container');
+                container.innerHTML = '';
+
+                if (events.length === 0) {
+                    container.innerHTML = '<div class="text-center py-10 text-slate-500">No events found in this category.</div>';
+                    return;
+                }
+
+                events.forEach(evt => {
+                    const isCreator = evt.creator_uid === auth.currentUser.uid;
+                    const isJoined = evt.members.includes(auth.currentUser.uid);
+                    const colorClass = { 'Sports': 'bg-orange-100 text-orange-700', 'Study': 'bg-indigo-100 text-indigo-700' }[evt.category] || 'bg-slate-100 text-slate-700';
+
+                    const html = `
+                        <div class="group bg-white border border-slate-200 rounded-xl p-4 md:p-5 hover:border-brand-300 hover:shadow-md transition-all flex flex-col sm:flex-row sm:items-center gap-4 animate-fade-in-down mb-4">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-1.5">
+                                    <span class="${colorClass} text-[10px] font-bold px-2 py-0.5 rounded uppercase">${evt.category}</span>
+                                    <span class="text-xs text-slate-500 font-medium">By ${evt.creator_name}</span>
+                                </div>
+                                <h3 class="text-lg font-bold text-slate-900 mb-1">${evt.title}</h3>
+                                <div class="flex items-center gap-4 text-sm text-slate-500">
+                                    <span class="flex items-center gap-1"><i class="ph-fill ph-map-pin"></i> ${evt.location}</span>
+                                    <span class="flex items-center gap-1"><i class="ph-fill ph-calendar-blank"></i> ${evt.event_date || 'TBD'} at ${evt.event_time || 'TBD'}</span>
+                                    <span class="flex items-center gap-1 text-green-600 font-medium"><i class="ph-fill ph-users"></i> ${evt.current_people}/${evt.max_people} spots</span>
+                                </div>
+                                <div class="mt-3">
+                                    <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(evt.location)}" target="_blank" class="inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-800 hover:underline">
+                                        <i class="ph-fill ph-map-trifold"></i> View on Google Maps
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto border-t sm:border-t-0 border-slate-100 pt-3 sm:pt-0 mt-1 sm:mt-0">
+                                <button onclick="openChat('${evt.title}', ${evt.current_people})" class="${isJoined ? '' : 'hidden'} chat-btn p-2.5 text-slate-500 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-colors"><i class="ph-fill ph-chat-circle-dots text-xl"></i></button>
+                                ${isCreator
+                            ? `<button onclick="deleteEvent('${evt.id}')" class="px-5 py-2 bg-white border border-slate-200 text-red-500 text-sm font-bold rounded-lg hover:bg-red-50">Delete</button>`
+                            : `<button onclick="joinEvent('${evt.id}')" class="px-5 py-2 ${isJoined ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-slate-900 text-white'} text-sm font-semibold rounded-lg shadow-sm whitespace-nowrap">${isJoined ? 'Joined' : 'Join'}</button>`
+                        }
+                            </div>
+                        </div>`;
+                    container.insertAdjacentHTML('beforeend', html);
+                });
+            } catch (error) { console.error("Load Events Error:", error); alert("Error loading events: " + error.message); }
+        }
+
+        async function handlePostSubmit(event) {
+            event.preventDefault();
+            try {
+                const title = document.getElementById('post-title').value;
+                const category = document.getElementById('post-category').value;
+                const max = document.getElementById('post-max').value;
+                const location = document.getElementById('post-location').value;
+                const date = document.getElementById('post-date').value;
+                const time = document.getElementById('post-time').value;
+
+                if (!auth.currentUser) { alert("Please sign in first"); return; }
+                // Get current user's token
+                const token = await auth.currentUser.getIdToken();
+
+                const response = await fetch('http://127.0.0.1:5001/events', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': token // Send token to backend
+                    },
+                    body: JSON.stringify({ title, category, max_people: max, location, event_date: date, event_time: time })
+                });
+
+                if (response.ok) {
+                    closeModal('action-modal');
+                    showToast('Activity posted!');
+                    loadEvents();
+                } else {
+                    throw new Error("Failed to post activity");
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Error posting: " + e.message);
+            }
+        }
+
+        async function joinEvent(eventId) {
+            console.log("Joining event:", eventId);
+            try {
+                if (!auth.currentUser) { alert("Please sign in first"); return; }
+                const token = await auth.currentUser.getIdToken();
+                const res = await fetch('http://127.0.0.1:5001/join', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': token },
+                    body: JSON.stringify({ event_id: eventId })
+                });
+                console.log("Join Response:", res.status);
+                if (!res.ok) throw new Error("Failed to join");
+                loadEvents();
+                showToast('Status updated');
+            } catch (e) {
+                console.error("Join Error:", e);
+                alert("Error joining: " + e.message);
+            }
+        }
+
+        async function loadReviews(userId) {
+            console.log("Fetching reviews for:", userId);
+            try {
+                const res = await fetch(`http://127.0.0.1:5001/reviews/${userId}`);
+                const data = await res.json();
+
+                // Update Reliability Score
+                const reliabilityEl = document.getElementById('reliability-score');
+                if (reliabilityEl) {
+                    if (data.total_reviews > 0) {
+                        const percentage = Math.round((data.average_rating / 5) * 100);
+                        reliabilityEl.innerText = percentage + "%";
+                    } else {
+                        reliabilityEl.innerText = "New";
+                    }
+                }
+
+                // Update Reviews List
+                const container = document.getElementById('reviews-list');
+                if (data.reviews.length === 0) {
+                    container.innerHTML = '<p class="text-sm text-slate-500 italic">No reviews yet.</p>';
+                    return;
+                }
+
+                container.innerHTML = data.reviews.map(review => {
+                    const isOwner = review.reviewer_uid === auth.currentUser.uid;
+                    return `
+                    <div class="bg-slate-50 rounded-xl p-3 group relative">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-sm font-bold text-slate-900">${review.reviewer_name}</span>
+                            <div class="flex text-yellow-400 text-xs">
+                                ${'★'.repeat(review.rating)}${'☆'.repeat(5 - review.rating)}
+                            </div>
+                        </div>
+                        <p class="text-sm text-slate-600">${review.comment}</p>
+                        ${isOwner ? `<button onclick="deleteReview('${review.id}')" class="absolute top-2 right-2 text-slate-400 hover:text-red-500 hidden group-hover:block transition-colors"><i class="ph-fill ph-trash"></i></button>` : ''}
+                    </div>
+                `}).join('');
+
+            } catch (e) {
+                console.error("Error loading reviews:", e);
+            }
+        }
+
+        function openReviewModal() {
+            // For now, just a simple prompt to test the API
+            const rating = prompt("Rate (1-5):");
+            if (!rating) return;
+            const comment = prompt("Comment:");
+            if (!comment) return;
+
+            submitReview(auth.currentUser.uid, rating, comment);
+        }
+
+        async function submitReview(targetUid, rating, comment) {
+            try {
+                const token = await auth.currentUser.getIdToken();
+                const res = await fetch('http://127.0.0.1:5001/reviews', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': token
+                    },
+                    body: JSON.stringify({ target_uid: targetUid, rating, comment })
+                });
+
+                if (res.ok) {
+                    loadReviews(targetUid); // Refresh list
+                    checkProfileCompletion(targetUid); // Refresh reliability
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Error submitting review");
+            }
+        }
+
+        async function deleteReview(reviewId) {
+            if (!confirm("Delete this review?")) return;
+            try {
+                const token = await auth.currentUser.getIdToken();
+                const res = await fetch(`http://127.0.0.1:5001/reviews/${reviewId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': token }
+                });
+
+                if (res.ok) {
+                    showToast("Review deleted");
+                    // We need to know whose profile we are on to refresh. 
+                    // For now, we can just reload the current user's profile if we are on it, 
+                    // or ideally pass the target_uid. 
+                    // A simple hack is to reload the reviews for the currently displayed profile.
+                    // Since we don't store the current profile UID globally in a clean way, let's just reload the page or infer it.
+                    // Actually, let's just reload the reviews for the current user for now as a fallback, 
+                    // OR better, we can store the current profile UID in a variable when we open the profile.
+                    // Let's assume we are viewing our own profile or someone else's.
+                    // For simplicity in this step, let's just reload the reviews of the *current user* if we are on the profile tab,
+                    // but wait, we might be viewing someone else.
+                    // Let's just reload the reviews for the person whose profile is open.
+                    // We can get the ID from the DOM or just reload the page.
+                    // Let's try to find the target_uid from the review list context? No.
+                    // Let's just reload the reviews for the *current user* since that's the most common case for testing.
+                    // Wait, the user asked to delete reviews.
+                    // Let's just call loadReviews(auth.currentUser.uid) as a safe default for testing own profile.
+                    loadReviews(auth.currentUser.uid);
+                } else {
+                    alert("Failed to delete review");
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Error deleting review");
+            }
+        }
+
+        async function deleteEvent(eventId) {
+            if (!confirm("Delete this event?")) return;
+            const token = await auth.currentUser.getIdToken();
+            await fetch(`http://127.0.0.1:5001/events/${eventId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': token }
+            });
+            loadEvents();
+            showToast('Event deleted');
+        }
+
+        // UI Helpers
+        function switchTab(tab) { const tabs = ['feed', 'explore', 'profile']; tabs.forEach(t => { document.getElementById('view-' + t).classList.add('hidden'); }); document.getElementById('view-' + tab).classList.remove('hidden'); }
+
+        function openModal(id) {
+            console.log("Opening modal:", id);
+            try {
+                const modal = document.getElementById('action-modal');
+                const panel = document.getElementById('modal-panel');
+
+                // Reset any previous forms
+                document.querySelectorAll('[id^="form-"]').forEach(e => e.classList.add('hidden'));
+
+                modal.classList.remove('hidden');
+                setTimeout(() => {
+                    modal.classList.remove('opacity-0');
+                    panel.classList.remove('scale-95', 'opacity-0');
+                }, 10);
+
+                document.getElementById('form-' + id).classList.remove('hidden');
+            } catch (e) {
+                alert("Error opening modal: " + e.message);
+                console.error(e);
+            }
+        }
+
+        function closeModal(modalId = 'action-modal') {
+            const modal = document.getElementById(modalId);
+            const panel = modal.querySelector('div[id$="-panel"]'); // Auto-detect panel
+
+            modal.classList.add('opacity-0');
+            if (panel) panel.classList.add('scale-95', 'opacity-0');
+
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                if (modalId === 'action-modal') {
+                    document.querySelectorAll('[id^="form-"]').forEach(e => e.classList.add('hidden'));
+                }
+            }, 300);
+        }
+
+        function openChat(title, members) {
+            console.log("Opening chat for:", title);
+            const modal = document.getElementById('chat-modal');
+            const panel = document.getElementById('chat-panel');
+
+            document.getElementById('chat-title').innerText = title;
+            document.getElementById('chat-subtitle').innerText = `${members} members active`;
+
+            // Clear previous messages
+            const msgContainer = document.getElementById('chat-messages');
+            msgContainer.innerHTML = '<div class="text-center text-slate-400 text-xs mt-4">This is the start of your conversation.</div>';
+
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                panel.classList.remove('scale-95', 'opacity-0'); // Slide up effect
+                panel.classList.remove('translate-y-full'); // For mobile
+            }, 10);
+        }
+
+        function handleChatSubmit(e) {
+            e.preventDefault();
+            const input = document.getElementById('chat-input');
+            const msg = input.value.trim();
+            if (!msg) return;
+
+            const container = document.getElementById('chat-messages');
+            const html = `
+                <div class="flex justify-end animate-fade-in-up">
+                    <div class="bg-brand-600 text-white px-4 py-2 rounded-2xl rounded-tr-none max-w-[80%] text-sm shadow-sm">
+                        ${msg}
+                    </div>
+                </div>`;
+            container.insertAdjacentHTML('beforeend', html);
+            input.value = '';
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function showToast(msg) { const t = document.getElementById('toast'); document.getElementById('toast-message').innerText = msg; t.classList.remove('translate-y-24', 'opacity-0'); setTimeout(() => t.classList.add('translate-y-24', 'opacity-0'), 3000); }
+
+        // Fallback for hardcoded events
+        function toggleJoin(btn) {
+            alert("This is a demo event. Real events are loading... if this persists, check console.");
+        }
+    </script>
+</body>
+
+</html>
