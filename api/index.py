@@ -385,7 +385,6 @@ def update_user_profile():
     user_ref.set(data, merge=True)
     
     return jsonify({"message": "Profile updated"}), 200
-    return jsonify({"message": "Profile updated"}), 200
 
 # --- FRIEND ROUTES ---
 @app.route('/friends', methods=['POST'])
@@ -436,6 +435,7 @@ def get_friends():
             
         friends_list.append({
             'uid': friend_uid,
+            'name': friend_data.get('name', 'Unknown'),
             'title': friend_data.get('title', ''),
             'active_event': active_event
         })
