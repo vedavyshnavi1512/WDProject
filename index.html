@@ -995,8 +995,12 @@
                     const friends = await fRes.json();
                     const isFriend = friends.some(f => f.uid === uid);
 
-                    // 2. Check if request sent (by me) - We can't easily check this without a new endpoint or checking all requests.
-                    // For simplicity, let's just check if *I* have a request from *them* first.
+                    // 2. Check if request sent (by me)
+                    const sRes = await fetch('/friends/sent_requests', { headers: { 'Authorization': token } });
+                    const sentRequests = await sRes.json();
+                    const hasSentRequest = sentRequests.some(r => r.target_uid === uid);
+
+                    // 3. Check if request received (from them)
                     const rRes = await fetch('/friends/requests', { headers: { 'Authorization': token } });
                     const requests = await rRes.json();
                     const hasRequestFromThem = requests.some(r => r.sender_uid === uid);
@@ -1009,11 +1013,11 @@
                         btnFriend.innerHTML = '<i class="ph-bold ph-check"></i> <span>Accept Request</span>';
                         btnFriend.className = 'px-3 py-1 bg-slate-900 text-white border border-slate-900 rounded-full text-xs font-bold hover:bg-slate-800 transition-colors flex items-center gap-1';
                         btnFriend.onclick = () => acceptRequest(uid);
+                    } else if (hasSentRequest) {
+                        btnFriend.innerHTML = '<i class="ph-bold ph-paper-plane-right"></i> <span>Request Sent</span>';
+                        btnFriend.className = 'px-3 py-1 bg-slate-100 text-slate-500 border border-slate-200 rounded-full text-xs font-bold cursor-default flex items-center gap-1';
+                        btnFriend.onclick = null; // Or allow cancel?
                     } else {
-                        // Ideally we check if I sent a request to them, but for now let's just show Add Friend.
-                        // If we try to add again, backend will say "Request sent" or handle it.
-                        // To be perfect, we'd need GET /friends/sent_requests.
-                        // Let's assume standard Add Friend for now.
                         btnFriend.innerHTML = '<i class="ph-bold ph-user-plus"></i> <span>Add Friend</span>';
                         btnFriend.className = 'px-3 py-1 bg-brand-50 text-brand-600 border border-brand-200 rounded-full text-xs font-bold hover:bg-brand-100 transition-colors flex items-center gap-1';
                         btnFriend.onclick = () => addFriend(uid);
@@ -1386,7 +1390,11 @@
                 const reqRes = await fetch('/friends/requests', { headers: { 'Authorization': token } });
                 const requests = await reqRes.json();
 
-                // 2. Fetch Friends
+                // 2. Fetch Sent Requests (Outgoing)
+                const sentRes = await fetch('/friends/sent_requests', { headers: { 'Authorization': token } });
+                const sentRequests = await sentRes.json();
+
+                // 3. Fetch Friends
                 const res = await fetch('/friends', { headers: { 'Authorization': token } });
                 const friends = await res.json();
 
@@ -1432,7 +1440,34 @@
                     if (dot) dot.remove();
                 }
 
-                if (friends.length === 0 && requests.length === 0) {
+                // Render Sent Requests
+                if (sentRequests.length > 0) {
+                    html += `<div class="col-span-full mb-4">
+                        <h3 class="text-lg font-bold text-slate-900 mb-3 flex items-center gap-2">
+                            <i class="ph-bold ph-paper-plane-right text-slate-400"></i> Sent Requests
+                        </h3>
+                        <div class="space-y-3">`;
+
+                    sentRequests.forEach(r => {
+                        html += `
+                            <div class="bg-slate-50 p-4 rounded-xl border border-slate-100 flex items-center justify-between opacity-75">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-full bg-white text-slate-400 flex items-center justify-center font-bold shadow-sm">
+                                        ${r.name.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div>
+                                        <p class="font-bold text-slate-900">${r.name}</p>
+                                        <p class="text-xs text-slate-500">Request Pending</p>
+                                    </div>
+                                </div>
+                                <button onclick="cancelRequest('${r.target_uid}')" class="px-3 py-1 bg-white text-slate-500 border border-slate-200 rounded-lg text-xs font-bold hover:bg-slate-50">Cancel</button>
+                            </div>
+                        `;
+                    });
+                    html += `</div></div><div class="col-span-full h-px bg-slate-100 my-2"></div>`;
+                }
+
+                if (friends.length === 0 && requests.length === 0 && sentRequests.length === 0) {
                     list.innerHTML = '<div class="text-center py-10 text-slate-500 col-span-full">You haven\'t added any friends yet.</div>';
                     return;
                 }
@@ -1505,6 +1540,25 @@
                 }
             } catch (e) {
                 alert("Failed to reject request");
+            }
+        }
+
+        async function cancelRequest(uid) {
+            if (!confirm("Cancel this request?")) return;
+            try {
+                const token = await auth.currentUser.getIdToken();
+                const res = await fetch('/friends/cancel_request', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': token },
+                    body: JSON.stringify({ target_uid: uid })
+                });
+
+                if (res.ok) {
+                    showToast("Request cancelled");
+                    loadFriends();
+                }
+            } catch (e) {
+                alert("Failed to cancel request");
             }
         }
 
