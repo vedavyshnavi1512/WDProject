@@ -1179,6 +1179,7 @@
             const panel = document.getElementById('members-panel');
             const list = document.getElementById('members-list');
             const isCreator = auth.currentUser && auth.currentUser.uid === creatorUid;
+            console.log("showEventMembers:", { eventId, creatorUid, isCreator, currentUser: auth.currentUser?.uid });
 
             // Show modal with loading state
             modal.classList.remove('hidden');
@@ -1234,9 +1235,11 @@
 
                 // Load Blocked Users (Creator Only)
                 if (isCreator) {
+                    console.log("Fetching blocked users...");
                     const blockedRes = await fetch(`/events/${eventId}/blocked`);
                     if (blockedRes.ok) {
                         const blockedUsers = await blockedRes.json();
+                        console.log("Blocked users:", blockedUsers);
                         if (blockedUsers.length > 0) {
                             list.insertAdjacentHTML('beforeend', `
                                 <div class="mt-4 mb-2 pt-4 border-t border-slate-100">
@@ -1259,6 +1262,12 @@
                                     </div>`;
                                 list.insertAdjacentHTML('beforeend', html);
                             });
+                        } else {
+                            list.insertAdjacentHTML('beforeend', `
+                                <div class="mt-4 pt-4 border-t border-slate-100 text-center">
+                                    <p class="text-xs text-slate-400 italic">No blocked users.</p>
+                                </div>
+                            `);
                         }
                     }
                 }
