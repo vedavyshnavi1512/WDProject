@@ -1236,7 +1236,10 @@
                 // Load Blocked Users (Creator Only)
                 if (isCreator) {
                     console.log("Fetching blocked users...");
-                    const blockedRes = await fetch(`/events/${eventId}/blocked`);
+                    const token = await auth.currentUser.getIdToken();
+                    const blockedRes = await fetch(`/events/${eventId}/blocked`, {
+                        headers: { 'Authorization': token }
+                    });
                     if (blockedRes.ok) {
                         const blockedUsers = await blockedRes.json();
                         console.log("Blocked users:", blockedUsers);
