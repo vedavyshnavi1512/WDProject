@@ -1174,10 +1174,11 @@
             }
         }
 
-        async function showEventMembers(eventId, isCreator = false) {
+        async function showEventMembers(eventId, creatorUid) {
             const modal = document.getElementById('members-modal');
             const panel = document.getElementById('members-panel');
             const list = document.getElementById('members-list');
+            const isCreator = auth.currentUser && auth.currentUser.uid === creatorUid;
 
             // Show modal with loading state
             modal.classList.remove('hidden');
@@ -1196,11 +1197,7 @@
                 </div>`;
 
             try {
-                // Fetch event details to identify host
-                const eventRes = await fetch(`/events/${eventId}`);
-                const eventData = await eventRes.json();
-                const creatorUid = eventData.creator_uid;
-
+                // No need to fetch event details, we have creatorUid
                 const res = await fetch(`/events/${eventId}/members`);
                 const members = await res.json();
 
@@ -1284,7 +1281,7 @@
 
                 if (res.ok) {
                     showToast("Member kicked");
-                    showEventMembers(eventId, true); // Refresh list
+                    showEventMembers(eventId, auth.currentUser.uid); // Refresh list
                     loadEvents(); // Refresh event counts
                 } else {
                     alert("Failed to kick member");
@@ -1307,7 +1304,7 @@
 
                 if (res.ok) {
                     showToast("User unblocked");
-                    showEventMembers(eventId, true); // Refresh list
+                    showEventMembers(eventId, auth.currentUser.uid); // Refresh list
                 } else {
                     alert("Failed to unblock user");
                 }
@@ -1383,7 +1380,7 @@
                                 <div class="flex items-center gap-4 text-sm text-slate-500">
                                     <span class="flex items-center gap-1"><i class="ph-fill ph-map-pin"></i> ${evt.location}</span>
                                     <span class="flex items-center gap-1"><i class="ph-fill ph-calendar-blank"></i> ${evt.event_date || 'TBD'} at ${evt.event_time || 'TBD'}</span>
-                                    <span onclick="showEventMembers('${evt.id}', ${isCreator})" class="flex items-center gap-1 text-green-600 font-medium cursor-pointer hover:underline"><i class="ph-fill ph-users"></i> ${evt.current_people}/${evt.max_people} spots</span>
+                                    <span onclick="showEventMembers('${evt.id}', '${evt.creator_uid}')" class="flex items-center gap-1 text-green-600 font-medium cursor-pointer hover:underline"><i class="ph-fill ph-users"></i> ${evt.current_people}/${evt.max_people} spots</span>
                                 </div>
                                 <div class="mt-3">
                                     <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(evt.location)}" target="_blank" class="inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-800 hover:underline">
