@@ -385,6 +385,62 @@ def update_user_profile():
     user_ref.set(data, merge=True)
     
     return jsonify({"message": "Profile updated"}), 200
+    return jsonify({"message": "Profile updated"}), 200
+
+# --- FRIEND ROUTES ---
+@app.route('/friends', methods=['POST'])
+def add_friend():
+    user = verify_token(request)
+    if not user: return jsonify({"error": "Unauthorized"}), 401
+    
+    data = request.json
+    friend_uid = data.get('friend_uid')
+    if not friend_uid: return jsonify({"error": "Friend UID required"}), 400
+    
+    # Add to subcollection
+    db.collection('users').document(user['uid']).collection('friends').document(friend_uid).set({
+        'added_at': datetime.now().isoformat()
+    })
+    return jsonify({"message": "Friend added"}), 200
+
+@app.route('/friends/<friend_uid>', methods=['DELETE'])
+def remove_friend(friend_uid):
+    user = verify_token(request)
+    if not user: return jsonify({"error": "Unauthorized"}), 401
+    
+    db.collection('users').document(user['uid']).collection('friends').document(friend_uid).delete()
+    return jsonify({"message": "Friend removed"}), 200
+
+@app.route('/friends', methods=['GET'])
+def get_friends():
+    user = verify_token(request)
+    if not user: return jsonify({"error": "Unauthorized"}), 401
+    
+    friends_ref = db.collection('users').document(user['uid']).collection('friends').stream()
+    friends_list = []
+    
+    for doc in friends_ref:
+        friend_uid = doc.id
+        # Fetch friend profile
+        friend_doc = db.collection('users').document(friend_uid).get()
+        if not friend_doc.exists: continue
+        
+        friend_data = friend_doc.to_dict()
+        
+        # Check activity (simple query for now)
+        # Find events where this friend is a member
+        events_ref = db.collection('events').where('members', 'array_contains', friend_uid).limit(1).stream()
+        active_event = None
+        for evt in events_ref:
+            active_event = evt.to_dict().get('title')
+            
+        friends_list.append({
+            'uid': friend_uid,
+            'title': friend_data.get('title', ''),
+            'active_event': active_event
+        })
+        
+    return jsonify(friends_list), 200
 
 @app.route('/reviews/<user_id>', methods=['GET'])
 def get_reviews(user_id):

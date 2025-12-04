@@ -153,6 +153,9 @@
                 <button onclick="switchTab('explore')" id="nav-explore"
                     class="w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 rounded-xl transition-colors"><i
                         class="ph-fill ph-compass text-xl"></i> Explore</button>
+                <button onclick="switchTab('friends')" id="nav-friends"
+                    class="w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 rounded-xl transition-colors"><i
+                        class="ph-fill ph-users text-xl"></i> Friends</button>
                 <button onclick="switchTab('profile')" id="nav-profile"
                     class="w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 rounded-xl transition-colors"><i
                         class="ph-fill ph-user text-xl"></i> My Profile</button>
@@ -230,6 +233,18 @@
                             <div class="text-center py-10 text-slate-500">Loading events...</div>
                         </div>
                     </section>
+                </div>
+
+                <div id="view-friends" class="max-w-4xl mx-auto space-y-8 hidden animate-fade-in-down">
+                    <div class="flex items-center justify-between">
+                        <h1 class="text-3xl font-bold text-slate-900">My Friends</h1>
+                        <button onclick="loadFriends()"
+                            class="text-sm font-bold text-brand-600 hover:underline">Refresh</button>
+                    </div>
+                    <div id="friends-list" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <!-- Friends loaded here -->
+                        <div class="text-center py-10 text-slate-500 col-span-full">Loading friends...</div>
+                    </div>
                 </div>
 
                 <div id="view-explore" class="max-w-5xl mx-auto space-y-10 hidden animate-fade-in-down">
@@ -540,6 +555,10 @@
                     <span id="public-gender"
                         class="px-3 py-1 bg-white border border-slate-200 rounded-full text-xs font-bold text-slate-600">Gender:
                         -</span>
+                    <button id="btn-friend-action" onclick="handleFriendAction()"
+                        class="hidden px-3 py-1 bg-brand-50 text-brand-600 border border-brand-200 rounded-full text-xs font-bold hover:bg-brand-100 transition-colors flex items-center gap-1">
+                        <i class="ph-bold ph-user-plus"></i> <span>Add Friend</span>
+                    </button>
                 </div>
             </div>
 
@@ -964,11 +983,38 @@
                 // Load Reviews
                 loadReviews(uid, 'public-reviews-list');
 
+                // Check Friend Status
+                const btnFriend = document.getElementById('btn-friend-action');
+                if (auth.currentUser && auth.currentUser.uid !== uid) {
+                    btnFriend.classList.remove('hidden');
+                    // Fetch friends to check status
+                    const token = await auth.currentUser.getIdToken();
+                    const fRes = await fetch('/friends', { headers: { 'Authorization': token } });
+                    const friends = await fRes.json();
+                    const isFriend = friends.some(f => f.uid === uid);
+
+                    if (isFriend) {
+                        btnFriend.innerHTML = '<i class="ph-bold ph-user-minus"></i> <span>Remove Friend</span>';
+                        btnFriend.className = 'px-3 py-1 bg-red-50 text-red-600 border border-red-200 rounded-full text-xs font-bold hover:bg-red-100 transition-colors flex items-center gap-1';
+                        btnFriend.onclick = () => removeFriend(uid);
+                    } else {
+                        btnFriend.innerHTML = '<i class="ph-bold ph-user-plus"></i> <span>Add Friend</span>';
+                        btnFriend.className = 'px-3 py-1 bg-brand-50 text-brand-600 border border-brand-200 rounded-full text-xs font-bold hover:bg-brand-100 transition-colors flex items-center gap-1';
+                        btnFriend.onclick = () => addFriend(uid);
+                    }
+                } else {
+                    btnFriend.classList.add('hidden');
+                }
+
             } catch (e) {
                 console.error("Error loading profile:", e);
                 alert("Failed to load profile");
                 closeModal('public-profile-modal');
             }
+        }
+
+        function handleFriendAction() {
+            // Placeholder, logic is set dynamically in openPublicProfile
         }
 
         function togglePublicReviewForm() {
@@ -1297,7 +1343,7 @@
 
         // UI Helpers
         function switchTab(tab) {
-            const tabs = ['feed', 'explore', 'profile'];
+            const tabs = ['feed', 'explore', 'profile', 'friends'];
             tabs.forEach(t => { document.getElementById('view-' + t).classList.add('hidden'); });
             document.getElementById('view-' + tab).classList.remove('hidden');
 
@@ -1306,6 +1352,92 @@
                 if (emailField && !emailField.value) {
                     emailField.value = auth.currentUser.email;
                 }
+            }
+
+            if (tab === 'friends') {
+                loadFriends();
+            }
+        }
+
+        async function loadFriends() {
+            const list = document.getElementById('friends-list');
+            list.innerHTML = '<div class="text-center py-10 text-slate-500 col-span-full">Loading friends...</div>';
+
+            try {
+                const token = await auth.currentUser.getIdToken();
+                const res = await fetch('/friends', { headers: { 'Authorization': token } });
+                const friends = await res.json();
+
+                if (friends.length === 0) {
+                    list.innerHTML = '<div class="text-center py-10 text-slate-500 col-span-full">You haven\'t added any friends yet.</div>';
+                    return;
+                }
+
+                list.innerHTML = '';
+                friends.forEach(f => {
+                    const html = `
+                        <div class="bg-white p-4 rounded-xl border border-slate-200 flex items-center justify-between shadow-sm hover:shadow-md transition-all">
+                            <div class="flex items-center gap-3 cursor-pointer" onclick="openPublicProfile('${f.uid}')">
+                                <div class="w-12 h-12 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center font-bold text-lg">
+                                    ${f.name.charAt(0).toUpperCase()}
+                                </div>
+                                <div>
+                                    <p class="font-bold text-slate-900">${f.name}</p>
+                                    <p class="text-xs text-slate-500">${f.title || 'Student'}</p>
+                                    ${f.active_event ? `<p class="text-xs text-green-600 font-semibold mt-1"><i class="ph-fill ph-check-circle"></i> Attending: ${f.active_event}</p>` : ''}
+                                </div>
+                            </div>
+                            <button onclick="removeFriend('${f.uid}')" class="text-slate-400 hover:text-red-500 p-2 rounded-full hover:bg-red-50 transition-colors" title="Remove Friend">
+                                <i class="ph-bold ph-user-minus text-xl"></i>
+                            </button>
+                        </div>
+                    `;
+                    list.insertAdjacentHTML('beforeend', html);
+                });
+            } catch (e) {
+                console.error(e);
+                list.innerHTML = '<div class="text-center py-10 text-red-500 col-span-full">Failed to load friends.</div>';
+            }
+        }
+
+        async function addFriend(uid) {
+            try {
+                const token = await auth.currentUser.getIdToken();
+                const res = await fetch('/friends', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': token },
+                    body: JSON.stringify({ friend_uid: uid })
+                });
+
+                if (res.ok) {
+                    showToast("Friend added!");
+                    openPublicProfile(uid); // Refresh modal
+                }
+            } catch (e) {
+                alert("Failed to add friend");
+            }
+        }
+
+        async function removeFriend(uid) {
+            if (!confirm("Remove this friend?")) return;
+            try {
+                const token = await auth.currentUser.getIdToken();
+                const res = await fetch(`/friends/${uid}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': token }
+                });
+
+                if (res.ok) {
+                    showToast("Friend removed");
+                    // If we are in the friends tab, reload list. If in modal, refresh modal.
+                    if (!document.getElementById('view-friends').classList.contains('hidden')) {
+                        loadFriends();
+                    } else {
+                        openPublicProfile(uid);
+                    }
+                }
+            } catch (e) {
+                alert("Failed to remove friend");
             }
         }
 
