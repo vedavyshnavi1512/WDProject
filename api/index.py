@@ -465,6 +465,46 @@ def get_reviews(user_id):
         "total_reviews": count
     }), 200
 
+# --- DIRECT MESSAGE ROUTES ---
+@app.route('/friends/<friend_uid>/chat', methods=['GET'])
+def get_friend_messages(friend_uid):
+    user = verify_token(request)
+    if not user: return jsonify({"error": "Unauthorized"}), 401
+    
+    # Deterministic Chat ID
+    chat_id = '_'.join(sorted([user['uid'], friend_uid]))
+    
+    messages_ref = db.collection('direct_messages').document(chat_id).collection('messages').order_by('timestamp').stream()
+    messages = []
+    for doc in messages_ref:
+        data = doc.to_dict()
+        data['id'] = doc.id
+        messages.append(data)
+        
+    return jsonify(messages), 200
+
+@app.route('/friends/<friend_uid>/chat', methods=['POST'])
+def send_friend_message(friend_uid):
+    user = verify_token(request)
+    if not user: return jsonify({"error": "Unauthorized"}), 401
+    
+    data = request.json
+    message = data.get('message')
+    if not message: return jsonify({"error": "Message required"}), 400
+    
+    # Deterministic Chat ID
+    chat_id = '_'.join(sorted([user['uid'], friend_uid]))
+    
+    msg_data = {
+        'sender_uid': user['uid'],
+        'sender_name': user.get('name', 'Anonymous'),
+        'message': message,
+        'timestamp': datetime.now().isoformat()
+    }
+    
+    db.collection('direct_messages').document(chat_id).collection('messages').add(msg_data)
+    return jsonify(msg_data), 201
+
 # --- CHAT ROUTES ---
 @app.route('/events/<event_id>/chat', methods=['GET'])
 def get_chat_messages(event_id):

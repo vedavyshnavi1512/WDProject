@@ -1387,9 +1387,14 @@
                                     ${f.active_event ? `<p class="text-xs text-green-600 font-semibold mt-1"><i class="ph-fill ph-check-circle"></i> Attending: ${f.active_event}</p>` : ''}
                                 </div>
                             </div>
-                            <button onclick="removeFriend('${f.uid}')" class="text-slate-400 hover:text-red-500 p-2 rounded-full hover:bg-red-50 transition-colors" title="Remove Friend">
-                                <i class="ph-bold ph-user-minus text-xl"></i>
-                            </button>
+                            <div class="flex gap-2">
+                                <button onclick="openChat(null, '${f.name}', 2, '${f.uid}')" class="text-slate-400 hover:text-brand-600 p-2 rounded-full hover:bg-brand-50 transition-colors" title="Message">
+                                    <i class="ph-fill ph-chat-circle-dots text-xl"></i>
+                                </button>
+                                <button onclick="removeFriend('${f.uid}')" class="text-slate-400 hover:text-red-500 p-2 rounded-full hover:bg-red-50 transition-colors" title="Remove Friend">
+                                    <i class="ph-bold ph-user-minus text-xl"></i>
+                                </button>
+                            </div>
                         </div>
                     `;
                     list.insertAdjacentHTML('beforeend', html);
@@ -1479,17 +1484,19 @@
         }
 
         let currentChatEventId = null;
+        let currentChatFriendUid = null;
         let chatPollInterval = null;
 
-        function openChat(eventId, title, membersCount) {
+        function openChat(eventId, title, membersCount, friendUid = null) {
             console.log("Opening chat for:", title);
             currentChatEventId = eventId;
+            currentChatFriendUid = friendUid;
 
             const modal = document.getElementById('chat-modal');
             const panel = document.getElementById('chat-panel');
 
             document.getElementById('chat-title').innerText = title;
-            document.getElementById('chat-subtitle').innerText = `${membersCount} members active`;
+            document.getElementById('chat-subtitle').innerText = friendUid ? 'Direct Message' : `${membersCount} members active`;
 
             // Clear previous messages
             const msgContainer = document.getElementById('chat-messages');
@@ -1512,13 +1519,19 @@
         function closeChat() {
             if (chatPollInterval) clearInterval(chatPollInterval);
             closeModal('chat-modal');
+            currentChatEventId = null;
+            currentChatFriendUid = null;
         }
 
         async function loadChatMessages() {
-            if (!currentChatEventId) return;
+            if (!currentChatEventId && !currentChatFriendUid) return;
             try {
                 const token = await auth.currentUser.getIdToken();
-                const res = await fetch(`/events/${currentChatEventId}/chat`, {
+                let url = currentChatFriendUid
+                    ? `/friends/${currentChatFriendUid}/chat`
+                    : `/events/${currentChatEventId}/chat`;
+
+                const res = await fetch(url, {
                     headers: { 'Authorization': token }
                 });
 
@@ -1564,7 +1577,11 @@
 
             try {
                 const token = await auth.currentUser.getIdToken();
-                await fetch(`/events/${currentChatEventId}/chat`, {
+                let url = currentChatFriendUid
+                    ? `/friends/${currentChatFriendUid}/chat`
+                    : `/events/${currentChatEventId}/chat`;
+
+                await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': token },
                     body: JSON.stringify({ message })
