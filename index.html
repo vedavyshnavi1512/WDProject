@@ -220,6 +220,16 @@
                                 <i class="ph-fill ph-books text-xl text-brand-500"></i>
                                 <span class="font-semibold text-slate-700">Study</span>
                             </button>
+                            <button onclick="filterEvents('Joined')" id="btn-Joined"
+                                class="flex-shrink-0 flex items-center gap-2 px-5 py-3 rounded-full bg-white border border-slate-200 hover:border-brand-500 hover:bg-brand-50 transition-all cursor-pointer shadow-sm">
+                                <i class="ph-fill ph-check-circle text-xl text-brand-500"></i>
+                                <span class="font-semibold text-slate-700">Joined</span>
+                            </button>
+                            <button onclick="filterEvents('Hosted')" id="btn-Hosted"
+                                class="flex-shrink-0 flex items-center gap-2 px-5 py-3 rounded-full bg-white border border-slate-200 hover:border-brand-500 hover:bg-brand-50 transition-all cursor-pointer shadow-sm">
+                                <i class="ph-fill ph-star text-xl text-brand-500"></i>
+                                <span class="font-semibold text-slate-700">Hosted</span>
+                            </button>
                         </div>
                     </section>
                     <section>
@@ -1034,7 +1044,8 @@
             currentCategory = category;
 
             // Update UI
-            const buttons = ['All', 'Sports', 'Coffee', 'Study'];
+            // Update UI
+            const buttons = ['All', 'Sports', 'Coffee', 'Study', 'Joined', 'Hosted'];
             buttons.forEach(btn => {
                 const el = document.getElementById('btn-' + btn);
                 if (btn === category) {
@@ -1335,10 +1346,21 @@
                 console.log("Events Loaded:", events.length);
 
                 // Client-side filtering
-                if (currentCategory !== 'All') {
+                if (currentCategory === 'Joined') {
+                    if (auth.currentUser) {
+                        events = events.filter(evt => evt.members.includes(auth.currentUser.uid) && evt.creator_uid !== auth.currentUser.uid);
+                    } else {
+                        events = []; // Must be logged in
+                    }
+                } else if (currentCategory === 'Hosted') {
+                    if (auth.currentUser) {
+                        events = events.filter(evt => evt.creator_uid === auth.currentUser.uid);
+                    } else {
+                        events = [];
+                    }
+                } else if (currentCategory !== 'All') {
                     events = events.filter(evt => evt.category === currentCategory);
                 }
-
                 // Timeframe Filter
                 if (currentTimeframe !== 'all') {
                     const now = new Date();
