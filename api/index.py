@@ -80,6 +80,9 @@ def signup():
     if not verify_recaptcha(captcha_token):
         return jsonify({"error": "Invalid CAPTCHA"}), 400
 
+    if firebase_init_error:
+        return jsonify({"error": f"Backend failed to initialize: {firebase_init_error}"}), 500
+
     try:
         # Create user in Firebase
         user = auth.create_user(
