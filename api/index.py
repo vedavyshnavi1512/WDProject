@@ -246,7 +246,8 @@ def join_event():
     event = event_ref.get()
 
     if event.exists:
-        members = event.to_dict().get('members', [])
+        event_data = event.to_dict()
+        members = event_data.get('members', [])
         if user['uid'] in members:
             # Unjoin
             event_ref.update({
