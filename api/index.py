@@ -287,6 +287,25 @@ def delete_event(event_id):
     # Check if the requester is the creator
     if doc.exists and doc.to_dict().get('creator_uid') == user['uid']:
         event_ref.delete()
+        return jsonify({"message": "Deleted"}), 200
+    
+    return jsonify({"error": "Permission denied"}), 403
+
+@app.route('/events/<event_id>/kick', methods=['POST'])
+def kick_member(event_id):
+    user = verify_token(request)
+    if not user:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    data = request.json
+    target_uid = data.get('target_uid')
+    if not target_uid:
+        return jsonify({"error": "Target UID required"}), 400
+
+    event_ref = db.collection('events').document(event_id)
+    doc = event_ref.get()
+    
+    if not doc.exists:
         return jsonify({"error": "Event not found"}), 404
     
     event_data = doc.to_dict()
@@ -740,6 +759,20 @@ def send_chat_message(event_id):
     event = event_ref.get()
     if not event.exists:
         return jsonify({"error": "Event not found"}), 404
+    
+    if user['uid'] not in event.to_dict().get('members', []) and event.to_dict().get('creator_uid') != user['uid']:
+        return jsonify({"error": "Not a member"}), 403
+
+    data = request.json
+    message = data.get('message')
+    if not message:
+        return jsonify({"error": "Message required"}), 400
+
+    msg_data = {
+        'sender_uid': user['uid'],
+        'sender_name': user.get('name', 'Anonymous'),
+        'message': message,
+        'timestamp': datetime.now().isoformat()
     }
 
     db.collection('events').document(event_id).collection('messages').add(msg_data)
