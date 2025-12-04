@@ -324,6 +324,68 @@ def kick_member(event_id):
     
     return jsonify({"status": "kicked"}), 200
 
+@app.route('/events/<event_id>/unblock', methods=['POST'])
+def unblock_member(event_id):
+    user = verify_token(request)
+    if not user:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    data = request.json
+    target_uid = data.get('target_uid')
+    if not target_uid:
+        return jsonify({"error": "Target UID required"}), 400
+
+    event_ref = db.collection('events').document(event_id)
+    doc = event_ref.get()
+    
+    if not doc.exists:
+        return jsonify({"error": "Event not found"}), 404
+    
+    event_data = doc.to_dict()
+    
+    # Only creator can unblock
+    if event_data.get('creator_uid') != user['uid']:
+        return jsonify({"error": "Permission denied"}), 403
+    
+    event_ref.update({
+        'kicked_users': firestore.ArrayRemove([target_uid])
+    })
+    
+    return jsonify({"status": "unblocked"}), 200
+
+@app.route('/events/<event_id>/blocked', methods=['GET'])
+def get_blocked_users(event_id):
+    user = verify_token(request)
+    if not user:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    event_ref = db.collection('events').document(event_id)
+    doc = event_ref.get()
+    
+    if not doc.exists:
+        return jsonify({"error": "Event not found"}), 404
+        
+    event_data = doc.to_dict()
+    
+    # Only creator can see blocked list
+    if event_data.get('creator_uid') != user['uid']:
+        return jsonify({"error": "Permission denied"}), 403
+        
+    blocked_uids = event_data.get('kicked_users', [])
+    blocked_users = []
+    
+    for uid in blocked_uids:
+        user_doc = db.collection('users').document(uid).get()
+        if user_doc.exists:
+            user_data = user_doc.to_dict()
+            blocked_users.append({
+                'uid': uid,
+                'name': user_data.get('name', 'Unknown'),
+                'title': user_data.get('title', '')
+            })
+            
+    return jsonify(blocked_users), 200
+
 @app.route('/events/<event_id>/members', methods=['GET'])
 def get_event_members(event_id):
     try:

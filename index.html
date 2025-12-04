@@ -1196,6 +1196,11 @@
                 </div>`;
 
             try {
+                // Fetch event details to identify host
+                const eventRes = await fetch(`/events/${eventId}`);
+                const eventData = await eventRes.json();
+                const creatorUid = eventData.creator_uid;
+
                 const res = await fetch(`/events/${eventId}/members`);
                 const members = await res.json();
 
@@ -1209,6 +1214,7 @@
                 members.forEach(m => {
                     const isSelf = auth.currentUser && m.uid === auth.currentUser.uid;
                     const canKick = isCreator && !isSelf;
+                    const isHost = m.uid === creatorUid;
 
                     const html = `
                         <div class="flex items-center justify-between p-2 hover:bg-slate-50 rounded-lg transition-colors">
@@ -1217,7 +1223,10 @@
                                     ${m.name.charAt(0).toUpperCase()}
                                 </div>
                                 <div>
-                                    <p class="font-bold text-slate-900 text-sm">${m.name}</p>
+                                    <p class="font-bold text-slate-900 text-sm flex items-center gap-2">
+                                        ${m.name}
+                                        ${isHost ? '<span class="px-1.5 py-0.5 rounded-md bg-brand-100 text-brand-700 text-[10px] font-bold uppercase tracking-wider">Host</span>' : ''}
+                                    </p>
                                     <p class="text-xs text-slate-500">${m.title || 'Member'}</p>
                                 </div>
                             </div>
@@ -1225,6 +1234,37 @@
                         </div>`;
                     list.insertAdjacentHTML('beforeend', html);
                 });
+
+                // Load Blocked Users (Creator Only)
+                if (isCreator) {
+                    const blockedRes = await fetch(`/events/${eventId}/blocked`);
+                    if (blockedRes.ok) {
+                        const blockedUsers = await blockedRes.json();
+                        if (blockedUsers.length > 0) {
+                            list.insertAdjacentHTML('beforeend', `
+                                <div class="mt-4 mb-2 pt-4 border-t border-slate-100">
+                                    <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Blocked Users</h4>
+                                </div>
+                            `);
+                            blockedUsers.forEach(u => {
+                                const html = `
+                                    <div class="flex items-center justify-between p-2 bg-red-50 rounded-lg opacity-75 hover:opacity-100 transition-opacity">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-8 h-8 rounded-full bg-red-100 text-red-600 flex items-center justify-center font-bold text-xs">
+                                                ${u.name.charAt(0).toUpperCase()}
+                                            </div>
+                                            <div>
+                                                <p class="font-bold text-slate-900 text-sm">${u.name}</p>
+                                                <p class="text-[10px] text-red-500 font-medium">Blocked</p>
+                                            </div>
+                                        </div>
+                                        <button onclick="unblockMember('${eventId}', '${u.uid}')" class="text-slate-400 hover:text-green-600 p-2 transition-colors" title="Unblock"><i class="ph-fill ph-arrow-u-up-left"></i></button>
+                                    </div>`;
+                                list.insertAdjacentHTML('beforeend', html);
+                            });
+                        }
+                    }
+                }
 
             } catch (e) {
                 console.error("Error loading members:", e);
@@ -1252,6 +1292,28 @@
             } catch (e) {
                 console.error(e);
                 alert("Error kicking member");
+            }
+        }
+
+        async function unblockMember(eventId, uid) {
+            if (!confirm("Unblock this user?")) return;
+            try {
+                const token = await auth.currentUser.getIdToken();
+                const res = await fetch(`/events/${eventId}/unblock`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': token },
+                    body: JSON.stringify({ target_uid: uid })
+                });
+
+                if (res.ok) {
+                    showToast("User unblocked");
+                    showEventMembers(eventId, true); // Refresh list
+                } else {
+                    alert("Failed to unblock user");
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Error unblocking user");
             }
         }
 
