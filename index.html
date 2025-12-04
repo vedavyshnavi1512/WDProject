@@ -989,15 +989,31 @@
                     btnFriend.classList.remove('hidden');
                     // Fetch friends to check status
                     const token = await auth.currentUser.getIdToken();
+
+                    // 1. Check if already friends
                     const fRes = await fetch('/friends', { headers: { 'Authorization': token } });
                     const friends = await fRes.json();
                     const isFriend = friends.some(f => f.uid === uid);
+
+                    // 2. Check if request sent (by me) - We can't easily check this without a new endpoint or checking all requests.
+                    // For simplicity, let's just check if *I* have a request from *them* first.
+                    const rRes = await fetch('/friends/requests', { headers: { 'Authorization': token } });
+                    const requests = await rRes.json();
+                    const hasRequestFromThem = requests.some(r => r.sender_uid === uid);
 
                     if (isFriend) {
                         btnFriend.innerHTML = '<i class="ph-bold ph-user-minus"></i> <span>Remove Friend</span>';
                         btnFriend.className = 'px-3 py-1 bg-red-50 text-red-600 border border-red-200 rounded-full text-xs font-bold hover:bg-red-100 transition-colors flex items-center gap-1';
                         btnFriend.onclick = () => removeFriend(uid);
+                    } else if (hasRequestFromThem) {
+                        btnFriend.innerHTML = '<i class="ph-bold ph-check"></i> <span>Accept Request</span>';
+                        btnFriend.className = 'px-3 py-1 bg-slate-900 text-white border border-slate-900 rounded-full text-xs font-bold hover:bg-slate-800 transition-colors flex items-center gap-1';
+                        btnFriend.onclick = () => acceptRequest(uid);
                     } else {
+                        // Ideally we check if I sent a request to them, but for now let's just show Add Friend.
+                        // If we try to add again, backend will say "Request sent" or handle it.
+                        // To be perfect, we'd need GET /friends/sent_requests.
+                        // Let's assume standard Add Friend for now.
                         btnFriend.innerHTML = '<i class="ph-bold ph-user-plus"></i> <span>Add Friend</span>';
                         btnFriend.className = 'px-3 py-1 bg-brand-50 text-brand-600 border border-brand-200 rounded-full text-xs font-bold hover:bg-brand-100 transition-colors flex items-center gap-1';
                         btnFriend.onclick = () => addFriend(uid);
@@ -1365,17 +1381,65 @@
 
             try {
                 const token = await auth.currentUser.getIdToken();
+
+                // 1. Fetch Requests
+                const reqRes = await fetch('/friends/requests', { headers: { 'Authorization': token } });
+                const requests = await reqRes.json();
+
+                // 2. Fetch Friends
                 const res = await fetch('/friends', { headers: { 'Authorization': token } });
                 const friends = await res.json();
 
-                if (friends.length === 0) {
+                let html = '';
+
+                // Render Requests
+                if (requests.length > 0) {
+                    html += `<div class="col-span-full mb-4">
+                        <h3 class="text-lg font-bold text-slate-900 mb-3 flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-red-500"></span> Friend Requests
+                        </h3>
+                        <div class="space-y-3">`;
+
+                    requests.forEach(r => {
+                        html += `
+                            <div class="bg-red-50 p-4 rounded-xl border border-red-100 flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-full bg-white text-red-500 flex items-center justify-center font-bold shadow-sm">
+                                        ${r.sender_name.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div>
+                                        <p class="font-bold text-slate-900">${r.sender_name}</p>
+                                        <p class="text-xs text-slate-500">Wants to be friends</p>
+                                    </div>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button onclick="acceptRequest('${r.sender_uid}')" class="px-3 py-1 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-slate-800">Accept</button>
+                                    <button onclick="rejectRequest('${r.sender_uid}')" class="px-3 py-1 bg-white text-slate-500 border border-slate-200 rounded-lg text-xs font-bold hover:bg-slate-50">Reject</button>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    html += `</div></div><div class="col-span-full h-px bg-slate-100 my-2"></div>`;
+
+                    // Update Nav Dot
+                    document.getElementById('nav-friends').classList.add('relative');
+                    if (!document.getElementById('nav-dot')) {
+                        document.getElementById('nav-friends').insertAdjacentHTML('beforeend',
+                            '<div id="nav-dot" class="absolute top-3 right-3 w-2 h-2 bg-red-500 rounded-full"></div>');
+                    }
+                } else {
+                    const dot = document.getElementById('nav-dot');
+                    if (dot) dot.remove();
+                }
+
+                if (friends.length === 0 && requests.length === 0) {
                     list.innerHTML = '<div class="text-center py-10 text-slate-500 col-span-full">You haven\'t added any friends yet.</div>';
                     return;
                 }
 
-                list.innerHTML = '';
+                // Render Friends
                 friends.forEach(f => {
-                    const html = `
+                    html += `
                         <div class="bg-white p-4 rounded-xl border border-slate-200 flex items-center justify-between shadow-sm hover:shadow-md transition-all">
                             <div class="flex items-center gap-3 cursor-pointer" onclick="openPublicProfile('${f.uid}')">
                                 <div class="w-12 h-12 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center font-bold text-lg">
@@ -1397,29 +1461,73 @@
                             </div>
                         </div>
                     `;
-                    list.insertAdjacentHTML('beforeend', html);
                 });
+
+                list.innerHTML = html;
+
             } catch (e) {
                 console.error(e);
                 list.innerHTML = '<div class="text-center py-10 text-red-500 col-span-full">Failed to load friends.</div>';
             }
         }
 
-        async function addFriend(uid) {
+        async function acceptRequest(uid) {
             try {
                 const token = await auth.currentUser.getIdToken();
-                const res = await fetch('/friends', {
+                const res = await fetch('/friends/accept', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': token },
-                    body: JSON.stringify({ friend_uid: uid })
+                    body: JSON.stringify({ requester_uid: uid })
                 });
 
                 if (res.ok) {
-                    showToast("Friend added!");
-                    openPublicProfile(uid); // Refresh modal
+                    showToast("Friend request accepted!");
+                    loadFriends();
                 }
             } catch (e) {
-                alert("Failed to add friend");
+                alert("Failed to accept request");
+            }
+        }
+
+        async function rejectRequest(uid) {
+            if (!confirm("Reject this request?")) return;
+            try {
+                const token = await auth.currentUser.getIdToken();
+                const res = await fetch('/friends/reject', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': token },
+                    body: JSON.stringify({ requester_uid: uid })
+                });
+
+                if (res.ok) {
+                    showToast("Request rejected");
+                    loadFriends();
+                }
+            } catch (e) {
+                alert("Failed to reject request");
+            }
+        }
+
+        async function addFriend(uid) {
+            try {
+                const token = await auth.currentUser.getIdToken();
+                const res = await fetch('/friends/request', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': token },
+                    body: JSON.stringify({ target_uid: uid })
+                });
+
+                if (res.ok) {
+                    showToast("Friend request sent!");
+                    openPublicProfile(uid); // Refresh modal
+                } else {
+                    const data = await res.json();
+                    if (data.error === "Already friends") {
+                        showToast("You are already friends!");
+                    }
+                }
+            } catch (e) {
+                alert("Failed to send request");
             }
         }
 

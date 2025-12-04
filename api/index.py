@@ -387,27 +387,84 @@ def update_user_profile():
     return jsonify({"message": "Profile updated"}), 200
 
 # --- FRIEND ROUTES ---
-@app.route('/friends', methods=['POST'])
-def add_friend():
+# --- FRIEND ROUTES ---
+@app.route('/friends/request', methods=['POST'])
+def send_friend_request():
     user = verify_token(request)
     if not user: return jsonify({"error": "Unauthorized"}), 401
     
     data = request.json
-    friend_uid = data.get('friend_uid')
-    if not friend_uid: return jsonify({"error": "Friend UID required"}), 400
+    target_uid = data.get('target_uid')
+    if not target_uid: return jsonify({"error": "Target UID required"}), 400
     
-    # Add to subcollection
-    db.collection('users').document(user['uid']).collection('friends').document(friend_uid).set({
+    # Check if already friends
+    if db.collection('users').document(user['uid']).collection('friends').document(target_uid).get().exists:
+        return jsonify({"error": "Already friends"}), 400
+
+    # Add to target's friend_requests
+    db.collection('users').document(target_uid).collection('friend_requests').document(user['uid']).set({
+        'sender_uid': user['uid'],
+        'sender_name': user.get('name', 'Unknown'),
+        'timestamp': datetime.now().isoformat()
+    })
+    return jsonify({"message": "Request sent"}), 200
+
+@app.route('/friends/accept', methods=['POST'])
+def accept_friend_request():
+    user = verify_token(request)
+    if not user: return jsonify({"error": "Unauthorized"}), 401
+    
+    data = request.json
+    requester_uid = data.get('requester_uid')
+    if not requester_uid: return jsonify({"error": "Requester UID required"}), 400
+    
+    # 1. Add to my friends
+    db.collection('users').document(user['uid']).collection('friends').document(requester_uid).set({
         'added_at': datetime.now().isoformat()
     })
-    return jsonify({"message": "Friend added"}), 200
+    
+    # 2. Add me to their friends
+    db.collection('users').document(requester_uid).collection('friends').document(user['uid']).set({
+        'added_at': datetime.now().isoformat()
+    })
+    
+    # 3. Delete request
+    db.collection('users').document(user['uid']).collection('friend_requests').document(requester_uid).delete()
+    
+    return jsonify({"message": "Friend accepted"}), 200
+
+@app.route('/friends/reject', methods=['POST'])
+def reject_friend_request():
+    user = verify_token(request)
+    if not user: return jsonify({"error": "Unauthorized"}), 401
+    
+    data = request.json
+    requester_uid = data.get('requester_uid')
+    
+    db.collection('users').document(user['uid']).collection('friend_requests').document(requester_uid).delete()
+    return jsonify({"message": "Request rejected"}), 200
+
+@app.route('/friends/requests', methods=['GET'])
+def get_friend_requests():
+    user = verify_token(request)
+    if not user: return jsonify({"error": "Unauthorized"}), 401
+    
+    reqs_ref = db.collection('users').document(user['uid']).collection('friend_requests').stream()
+    requests = []
+    for doc in reqs_ref:
+        requests.append(doc.to_dict())
+        
+    return jsonify(requests), 200
 
 @app.route('/friends/<friend_uid>', methods=['DELETE'])
 def remove_friend(friend_uid):
     user = verify_token(request)
     if not user: return jsonify({"error": "Unauthorized"}), 401
     
+    # Remove from both sides
     db.collection('users').document(user['uid']).collection('friends').document(friend_uid).delete()
+    db.collection('users').document(friend_uid).collection('friends').document(user['uid']).delete()
+    
     return jsonify({"message": "Friend removed"}), 200
 
 @app.route('/friends', methods=['GET'])
