@@ -759,20 +759,6 @@ def send_chat_message(event_id):
     event = event_ref.get()
     if not event.exists:
         return jsonify({"error": "Event not found"}), 404
-    
-    if user['uid'] not in event.to_dict().get('members', []) and event.to_dict().get('creator_uid') != user['uid']:
-        return jsonify({"error": "Not a member"}), 403
-
-    data = request.json
-    message = data.get('message')
-    if not message:
-        return jsonify({"error": "Message required"}), 400
-
-    msg_data = {
-        'sender_uid': user['uid'],
-        'sender_name': user.get('name', 'Anonymous'),
-        'message': message,
-        'timestamp': datetime.now().isoformat()
     }
 
     db.collection('events').document(event_id).collection('messages').add(msg_data)
