@@ -256,6 +256,13 @@ def join_event():
             return jsonify({"status": "unjoined"}), 200
         else:
             # Join
+            # Check capacity
+            current_people = event_data.get('current_people', 0)
+            max_people = int(event_data.get('max_people', 100)) # Default to 100 if missing
+            
+            if current_people >= max_people:
+                return jsonify({"error": "Event is full"}), 400
+
             event_ref.update({
                 'members': firestore.ArrayUnion([user['uid']]),
                 'current_people': firestore.Increment(1)
