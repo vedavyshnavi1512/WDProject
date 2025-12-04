@@ -980,7 +980,14 @@
         function openFilterModal() {
             const modal = document.getElementById('filter-modal');
             const panel = document.getElementById('filter-panel');
+
+            // Sync UI with state
+            document.getElementById('filter-sort').value = currentSort;
+            setFilterTime(currentTimeframe);
+
             modal.classList.remove('hidden');
+            modal.classList.remove('opacity-0'); // Fix: Ensure wrapper is visible
+
             setTimeout(() => {
                 modal.querySelector('div.transition-opacity').classList.remove('opacity-0');
                 panel.classList.remove('opacity-0', 'scale-95');
