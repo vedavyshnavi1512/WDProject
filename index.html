@@ -1491,10 +1491,14 @@
                         if (data.total_reviews > 0) {
                             const percentage = Math.round((data.average_rating / 5) * 100);
                             pubReliabilityEl.innerHTML = `<i class="ph-fill ph-seal-check"></i> <span>${percentage}% Reliable</span>`;
-                            pubReliabilityEl.classList.remove('hidden');
+                            pubReliabilityEl.classList.remove('bg-slate-100', 'text-slate-600', 'border-slate-200');
+                            pubReliabilityEl.classList.add('bg-green-50', 'text-green-700', 'border-green-200');
                         } else {
-                            pubReliabilityEl.classList.add('hidden');
+                            pubReliabilityEl.innerHTML = `<i class="ph-fill ph-star"></i> <span>New</span>`;
+                            pubReliabilityEl.classList.remove('bg-green-50', 'text-green-700', 'border-green-200');
+                            pubReliabilityEl.classList.add('bg-slate-100', 'text-slate-600', 'border-slate-200');
                         }
+                        pubReliabilityEl.classList.remove('hidden');
                     }
                 }
 
