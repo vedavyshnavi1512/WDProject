@@ -198,25 +198,7 @@
             </header>
 
             <main class="flex-1 overflow-y-auto p-4 md:p-8 scroll-smooth">
-                <!-- Verification Banner -->
-                <div id="verification-banner"
-                    class="hidden mb-6 bg-yellow-50 border border-yellow-200 rounded-xl p-4 flex items-center justify-between">
-                    <div class="flex items-center gap-3">
-                        <div
-                            class="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center text-yellow-600">
-                            <i class="ph-fill ph-warning text-xl"></i>
-                        </div>
-                        <div>
-                            <h3 class="font-bold text-slate-900">Please verify your email</h3>
-                            <p class="text-sm text-slate-600">You need to verify your email address to create events.
-                            </p>
-                        </div>
-                    </div>
-                    <button onclick="sendVerificationEmail()" id="btn-resend-verify"
-                        class="px-4 py-2 bg-yellow-100 text-yellow-700 text-sm font-bold rounded-lg hover:bg-yellow-200 transition-colors">
-                        Resend Email
-                    </button>
-                </div>
+
 
                 <div id="view-feed" class="max-w-4xl mx-auto space-y-8 animate-fade-in-down">
                     <section>
@@ -806,26 +788,6 @@
                 loadEvents(); // Load data from backend
                 loadReviews(user.uid); // Load reviews
                 checkProfileCompletion(user.uid); // Check for red dot
-
-                // Email Verification Check
-                const banner = document.getElementById('verification-banner');
-                const createBtn = document.getElementById('btn-create-event');
-
-                if (!user.emailVerified) {
-                    banner.classList.remove('hidden');
-                    if (createBtn) {
-                        createBtn.disabled = true;
-                        createBtn.classList.add('opacity-50', 'cursor-not-allowed');
-                        createBtn.title = "Verify email to create events";
-                    }
-                } else {
-                    banner.classList.add('hidden');
-                    if (createBtn) {
-                        createBtn.disabled = false;
-                        createBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-                        createBtn.title = "";
-                    }
-                }
             } else {
                 // User is signed out
                 document.getElementById('app-container').classList.add('hidden');
@@ -1228,23 +1190,7 @@
             }
         }
 
-        async function sendVerificationEmail() {
-            const btn = document.getElementById('btn-resend-verify');
-            if (!auth.currentUser) return;
 
-            try {
-                btn.disabled = true;
-                btn.innerText = "Sending...";
-                await auth.currentUser.sendEmailVerification();
-                showToast("Verification email sent!");
-                btn.innerText = "Sent!";
-            } catch (e) {
-                console.error(e);
-                showToast("Error sending email. Try again later.");
-                btn.innerText = "Resend Email";
-                btn.disabled = false;
-            }
-        }
 
         async function showEventMembers(eventId, creatorUid) {
             const modal = document.getElementById('members-modal');

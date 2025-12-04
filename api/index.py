@@ -71,19 +71,16 @@ def verify_recaptcha(token):
 
 @app.route('/auth/signup', methods=['POST'])
 def signup():
+    data = request.json
+    email = data.get('email')
+    password = data.get('password')
+    name = data.get('name')
+    captcha_token = data.get('captcha_token')
+
+    if not verify_recaptcha(captcha_token):
+        return jsonify({"error": "Invalid CAPTCHA"}), 400
+
     try:
-        if firebase_init_error:
-            return jsonify({"error": f"Backend failed to initialize: {firebase_init_error}"}), 500
-
-        data = request.json
-        email = data.get('email')
-        password = data.get('password')
-        name = data.get('name')
-        captcha_token = data.get('captcha_token')
-
-        if not verify_recaptcha(captcha_token):
-            return jsonify({"error": "Invalid CAPTCHA"}), 400
-
         # Create user in Firebase
         user = auth.create_user(
             email=email,
@@ -108,8 +105,7 @@ def signup():
             
         return jsonify({"token": custom_token.decode('utf-8')}), 201
     except Exception as e:
-        print(f"Signup Error: {e}")
-        return jsonify({"error": f"Internal Server Error: {str(e)}"}), 500
+        return jsonify({"error": str(e)}), 400
 
 @app.route('/auth/login', methods=['POST'])
 def login():
@@ -291,25 +287,6 @@ def delete_event(event_id):
     # Check if the requester is the creator
     if doc.exists and doc.to_dict().get('creator_uid') == user['uid']:
         event_ref.delete()
-        return jsonify({"message": "Deleted"}), 200
-    
-    return jsonify({"error": "Permission denied"}), 403
-
-@app.route('/events/<event_id>/kick', methods=['POST'])
-def kick_member(event_id):
-    user = verify_token(request)
-    if not user:
-        return jsonify({"error": "Unauthorized"}), 401
-    
-    data = request.json
-    target_uid = data.get('target_uid')
-    if not target_uid:
-        return jsonify({"error": "Target UID required"}), 400
-
-    event_ref = db.collection('events').document(event_id)
-    doc = event_ref.get()
-    
-    if not doc.exists:
         return jsonify({"error": "Event not found"}), 404
     
     event_data = doc.to_dict()
