@@ -602,6 +602,10 @@
                     <div>
                         <h3 id="public-name" class="text-xl font-bold text-slate-900">User Name</h3>
                         <p id="public-title" class="text-sm text-slate-500">Title</p>
+                        <div id="public-reliability-score"
+                            class="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-50 text-green-700 text-xs font-bold border border-green-200 hidden">
+                            <i class="ph-fill ph-seal-check"></i> <span>100% Reliable</span>
+                        </div>
                     </div>
                 </div>
                 <div class="mt-4 flex gap-2">
@@ -1384,6 +1388,20 @@
                             reliabilityEl.innerText = percentage + "%";
                         } else {
                             reliabilityEl.innerText = "New";
+                        }
+                    }
+                }
+
+                // Update Public Profile Reliability Score
+                if (containerId === 'public-reviews-list') {
+                    const pubReliabilityEl = document.getElementById('public-reliability-score');
+                    if (pubReliabilityEl) {
+                        if (data.total_reviews > 0) {
+                            const percentage = Math.round((data.average_rating / 5) * 100);
+                            pubReliabilityEl.innerHTML = `<i class="ph-fill ph-seal-check"></i> <span>${percentage}% Reliable</span>`;
+                            pubReliabilityEl.classList.remove('hidden');
+                        } else {
+                            pubReliabilityEl.classList.add('hidden');
                         }
                     }
                 }
