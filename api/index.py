@@ -71,19 +71,19 @@ def verify_recaptcha(token):
 
 @app.route('/auth/signup', methods=['POST'])
 def signup():
-    data = request.json
-    email = data.get('email')
-    password = data.get('password')
-    name = data.get('name')
-    captcha_token = data.get('captcha_token')
-
-    if not verify_recaptcha(captcha_token):
-        return jsonify({"error": "Invalid CAPTCHA"}), 400
-
-    if firebase_init_error:
-        return jsonify({"error": f"Backend failed to initialize: {firebase_init_error}"}), 500
-
     try:
+        if firebase_init_error:
+            return jsonify({"error": f"Backend failed to initialize: {firebase_init_error}"}), 500
+
+        data = request.json
+        email = data.get('email')
+        password = data.get('password')
+        name = data.get('name')
+        captcha_token = data.get('captcha_token')
+
+        if not verify_recaptcha(captcha_token):
+            return jsonify({"error": "Invalid CAPTCHA"}), 400
+
         # Create user in Firebase
         user = auth.create_user(
             email=email,
@@ -108,7 +108,8 @@ def signup():
             
         return jsonify({"token": custom_token.decode('utf-8')}), 201
     except Exception as e:
-        return jsonify({"error": str(e)}), 400
+        print(f"Signup Error: {e}")
+        return jsonify({"error": f"Internal Server Error: {str(e)}"}), 500
 
 @app.route('/auth/login', methods=['POST'])
 def login():
