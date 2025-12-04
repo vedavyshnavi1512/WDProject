@@ -1174,7 +1174,7 @@
             }
         }
 
-        async function showEventMembers(eventId) {
+        async function showEventMembers(eventId, isCreator = false) {
             const modal = document.getElementById('members-modal');
             const panel = document.getElementById('members-panel');
             const list = document.getElementById('members-list');
@@ -1207,15 +1207,21 @@
                 }
 
                 members.forEach(m => {
+                    const isSelf = auth.currentUser && m.uid === auth.currentUser.uid;
+                    const canKick = isCreator && !isSelf;
+
                     const html = `
-                        <div onclick="openPublicProfile('${m.uid}')" class="flex items-center gap-3 p-2 hover:bg-slate-50 rounded-lg transition-colors cursor-pointer">
-                            <div class="w-10 h-10 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center font-bold text-sm">
-                                ${m.name.charAt(0).toUpperCase()}
+                        <div class="flex items-center justify-between p-2 hover:bg-slate-50 rounded-lg transition-colors">
+                            <div onclick="openPublicProfile('${m.uid}')" class="flex items-center gap-3 cursor-pointer flex-1">
+                                <div class="w-10 h-10 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center font-bold text-sm">
+                                    ${m.name.charAt(0).toUpperCase()}
+                                </div>
+                                <div>
+                                    <p class="font-bold text-slate-900 text-sm">${m.name}</p>
+                                    <p class="text-xs text-slate-500">${m.title || 'Member'}</p>
+                                </div>
                             </div>
-                            <div>
-                                <p class="font-bold text-slate-900 text-sm">${m.name}</p>
-                                <p class="text-xs text-slate-500">${m.title || 'Member'}</p>
-                            </div>
+                            ${canKick ? `<button onclick="kickMember('${eventId}', '${m.uid}')" class="text-slate-400 hover:text-red-500 p-2 transition-colors" title="Kick Member"><i class="ph-fill ph-user-minus"></i></button>` : ''}
                         </div>`;
                     list.insertAdjacentHTML('beforeend', html);
                 });
@@ -1223,6 +1229,29 @@
             } catch (e) {
                 console.error("Error loading members:", e);
                 list.innerHTML = '<p class="text-red-500 text-center py-4">Failed to load members.</p>';
+            }
+        }
+
+        async function kickMember(eventId, uid) {
+            if (!confirm("Kick this member?")) return;
+            try {
+                const token = await auth.currentUser.getIdToken();
+                const res = await fetch(`/events/${eventId}/kick`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': token },
+                    body: JSON.stringify({ target_uid: uid })
+                });
+
+                if (res.ok) {
+                    showToast("Member kicked");
+                    showEventMembers(eventId, true); // Refresh list
+                    loadEvents(); // Refresh event counts
+                } else {
+                    alert("Failed to kick member");
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Error kicking member");
             }
         }
 
@@ -1292,7 +1321,7 @@
                                 <div class="flex items-center gap-4 text-sm text-slate-500">
                                     <span class="flex items-center gap-1"><i class="ph-fill ph-map-pin"></i> ${evt.location}</span>
                                     <span class="flex items-center gap-1"><i class="ph-fill ph-calendar-blank"></i> ${evt.event_date || 'TBD'} at ${evt.event_time || 'TBD'}</span>
-                                    <span onclick="showEventMembers('${evt.id}')" class="flex items-center gap-1 text-green-600 font-medium cursor-pointer hover:underline"><i class="ph-fill ph-users"></i> ${evt.current_people}/${evt.max_people} spots</span>
+                                    <span onclick="showEventMembers('${evt.id}', ${isCreator})" class="flex items-center gap-1 text-green-600 font-medium cursor-pointer hover:underline"><i class="ph-fill ph-users"></i> ${evt.current_people}/${evt.max_people} spots</span>
                                 </div>
                                 <div class="mt-3">
                                     <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(evt.location)}" target="_blank" class="inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-800 hover:underline">
@@ -1304,9 +1333,11 @@
                                 <button onclick="openChat('${evt.id}', '${evt.title}', ${evt.current_people})" class="${isJoined ? '' : 'hidden'} chat-btn p-2.5 text-slate-500 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-colors"><i class="ph-fill ph-chat-circle-dots text-xl"></i></button>
                                 ${isCreator
                             ? `<button onclick="deleteEvent('${evt.id}')" class="px-5 py-2 bg-white border border-slate-200 text-red-500 text-sm font-bold rounded-lg hover:bg-red-50">Delete</button>`
-                            : (evt.current_people >= evt.max_people && !isJoined)
-                                ? `<button disabled class="px-5 py-2 bg-slate-100 text-slate-400 border border-slate-200 text-sm font-bold rounded-lg cursor-not-allowed">Full</button>`
-                                : `<button onclick="joinEvent('${evt.id}')" class="px-5 py-2 ${isJoined ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-slate-900 text-white'} text-sm font-semibold rounded-lg shadow-sm whitespace-nowrap">${isJoined ? 'Joined' : 'Join'}</button>`
+                            : (evt.kicked_users && evt.kicked_users.includes(auth.currentUser.uid))
+                                ? `<button disabled class="px-5 py-2 bg-red-50 text-red-400 border border-red-100 text-sm font-bold rounded-lg cursor-not-allowed">Blocked</button>`
+                                : (evt.current_people >= evt.max_people && !isJoined)
+                                    ? `<button disabled class="px-5 py-2 bg-slate-100 text-slate-400 border border-slate-200 text-sm font-bold rounded-lg cursor-not-allowed">Full</button>`
+                                    : `<button onclick="joinEvent('${evt.id}')" class="px-5 py-2 ${isJoined ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-slate-900 text-white'} text-sm font-semibold rounded-lg shadow-sm whitespace-nowrap">${isJoined ? 'Joined' : 'Join'}</button>`
                         }
                             </div>
                         </div>`;

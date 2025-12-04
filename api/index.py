@@ -263,6 +263,10 @@ def join_event():
             if current_people >= max_people:
                 return jsonify({"error": "Event is full"}), 400
 
+            # Check if kicked
+            if user['uid'] in event_data.get('kicked_users', []):
+                return jsonify({"error": "You have been kicked from this event"}), 403
+
             event_ref.update({
                 'members': firestore.ArrayUnion([user['uid']]),
                 'current_people': firestore.Increment(1)
@@ -285,6 +289,40 @@ def delete_event(event_id):
         return jsonify({"message": "Deleted"}), 200
     
     return jsonify({"error": "Permission denied"}), 403
+
+@app.route('/events/<event_id>/kick', methods=['POST'])
+def kick_member(event_id):
+    user = verify_token(request)
+    if not user:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    data = request.json
+    target_uid = data.get('target_uid')
+    if not target_uid:
+        return jsonify({"error": "Target UID required"}), 400
+
+    event_ref = db.collection('events').document(event_id)
+    doc = event_ref.get()
+    
+    if not doc.exists:
+        return jsonify({"error": "Event not found"}), 404
+    
+    event_data = doc.to_dict()
+    
+    # Only creator can kick
+    if event_data.get('creator_uid') != user['uid']:
+        return jsonify({"error": "Permission denied"}), 403
+    
+    if target_uid not in event_data.get('members', []):
+        return jsonify({"error": "User not in event"}), 400
+
+    event_ref.update({
+        'members': firestore.ArrayRemove([target_uid]),
+        'kicked_users': firestore.ArrayUnion([target_uid]),
+        'current_people': firestore.Increment(-1)
+    })
+    
+    return jsonify({"status": "kicked"}), 200
 
 @app.route('/events/<event_id>/members', methods=['GET'])
 def get_event_members(event_id):
