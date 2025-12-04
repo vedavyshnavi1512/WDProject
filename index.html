@@ -896,6 +896,19 @@
 
 
             try {
+                // Password Validation (Only for Signup)
+                if (isSignup) {
+                    const minLength = 8;
+                    const hasUpperCase = /[A-Z]/.test(password);
+                    const hasNumber = /\d/.test(password);
+                    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+
+                    if (password.length < minLength || !hasUpperCase || !hasNumber || !hasSpecialChar) {
+                        alert("Password must be at least 8 characters long and include:\n- One uppercase letter\n- One number\n- One special character");
+                        return;
+                    }
+                }
+
                 // Get reCAPTCHA token
                 const captchaToken = grecaptcha.getResponse();
                 if (!captchaToken) {
